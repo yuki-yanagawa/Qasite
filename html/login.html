@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="app.css">
+    <link rel="stylesheet" href="signin.css">
+</head>
+<body id="loginBody">
+    <nav class="navbar navbar-expand-sm navbar-light bg-light">
+        <a class="navbar-brand" href="/">Q&A SITE</a>
+    </nav>
+    <!-- <div class="container"> -->
+    <!-- 全幅 -->
+    <!-- <div class="container-fluid"> -->
+    <div class="container">
+        <main class="form-signin">
+            <form>
+                <h4 class="h4 mb-3 fw-normal">ログインお願い致します。</h4>
+            	<div class="form-floating">
+                	<label for="floatingInput">ユーザー名</label>
+                	<input id="Username" type="text" class="form-control" id="floatingInput" placeholder="田中太郎">
+                	<!-- <input type="email" class="form-control" id="floatingInput" placeholder="name@example.com"> -->
+            	</div>
+            	<div class="form-floating">
+                	<label for="floatingPassword">パスワード</label>
+                	<input id="Password" type="password" class="form-control" id="floatingPassword" placeholder="xxxxx">
+            	</div>
+            	<button id="loginSubmitBt" class="w-100 btn btn-lg btn-primary" type="button">ログイン</button>
+                </br>
+                <a href="newUserRegisterPage">新規登録する</a>
+            </form>
+          </main>
+    </div>
+    <div class="container-fluid">
+        <div class="card-body">
+            <p class="mt-5 mb-3 text-muted">
+                &copy; Q&Aサンプルサイト
+            </p>
+        </div>
+    </div>
+    <script src="jquery-3.7.1.min.js"></script>
+	<script src="popper.min.js"></script>
+    <script src="bootstrap.min.js"></script>
+    <script src="daialog.js"></script>
+    <script src="login.js"></script>
+</body>
+</html>

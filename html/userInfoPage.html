@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="app.css">
+    <link rel="stylesheet" href="userInfoPage.css">
+</head>
+<body id="userInfoPageBody">
+    <nav class="navbar navbar-expand-sm navbar-light bg-light">
+        <a class="navbar-brand" href="/">Q&A SITE</a>
+    </nav>
+    <div class="container">
+        <main class="form-signin">
+            <form>
+                <h4 class="h4 mb-3 fw-normal">ユーザー情報</h4>
+                <div>
+                    <div class="card">
+                        <div class="card-body img-area">
+                            <svg id="userCircleSvg" xmlns="http://www.w3.org/2000/svg" width="140" height="140" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
+                                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                                <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+                            </svg>
+                            <canvas id="imgCanvas">
+                            </canvas>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="card-title">--- ユーザー情報 ---</p>
+                            <div id="userRankArea" class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">
+                                        <svg id="userRankSvg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bookmark-star-fill" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd" d="M2 15.5V2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.74.439L8 13.069l-5.26 2.87A.5.5 0 0 1 2 15.5zM8.16 4.1a.178.178 0 0 0-.32 0l-.634 1.285a.178.178 0 0 1-.134.098l-1.42.206a.178.178 0 0 0-.098.303L6.58 6.993c.042.041.061.1.051.158L6.39 8.565a.178.178 0 0 0 .258.187l1.27-.668a.178.178 0 0 1 .165 0l1.27.668a.178.178 0 0 0 .257-.187L9.368 7.15a.178.178 0 0 1 .05-.158l1.028-1.001a.178.178 0 0 0-.098-.303l-1.42-.206a.178.178 0 0 1-.134-.098L8.16 4.1z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                                <input type="text" class="form-control" aria-describedby="basic-addon1" disabled>
+                                <div id="hiddenUserRankValue" style="display: none;"></div>
+                            </div>
+                            <div id="userIDArea" class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">ユーザーID:</span>
+                                </div>
+                                <input type="text" class="form-control" aria-describedby="basic-addon1" disabled>
+                            </div>
+                            <div id="userNameArea" class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">ユーザー名:</span>
+                                </div>
+                                <input type="text" class="form-control" aria-describedby="basic-addon1" disabled>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="card-title">--- 自己紹介 ---</p>
+                            <div class="form-control" id="inputTextArea"></div>
+                            <!-- <div class="form-control" id="inputPreview" contenteditable="false"></div> -->
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="card">
+                        <div class="card-footer">
+                            <button id="repairUserInfo" class="w-30 btn btn-primary" type="button" style="display: none;">編集する</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </main>
+    </div>
+    <div class="block">
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+            <div>
+                <span>Loading...</span>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid">
+        <div class="card-body">
+            <p class="mt-5 mb-3 text-muted">
+                &copy; Q&Aサンプルサイト
+            </p>
+        </div>
+    </div>
+    <script src="jquery-3.7.1.min.js"></script>
+	<script src="popper.min.js"></script>
+    <script src="bootstrap.min.js"></script>
+    <script src="daialog.js"></script>
+    <script src="common.js"></script>
+    <script src="userInfoPage.js"></script>
+</body>
+</html>
