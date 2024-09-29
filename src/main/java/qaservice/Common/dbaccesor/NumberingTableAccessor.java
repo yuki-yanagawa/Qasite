@@ -5,8 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import datasheet.hellostatistics.dbconnect.DBConnectionOperation;
-import datasheet.hellostatistics.logger.ServerLogger;
+import qaservice.WebServer.dbconnect.DBConnectionOperation;
+import qaservice.WebServer.logger.ServerLogger;
 
 public class NumberingTableAccessor {
 	/**

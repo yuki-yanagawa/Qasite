@@ -15,11 +15,11 @@ import java.util.Set;
 
 import org.h2.command.query.AllColumnsForPlan;
 
-import datasheet.hellostatistics.cryptography.MessageDigestTypeSHA256;
-import datasheet.hellostatistics.dbconnect.DBConnectionOperation;
-import datasheet.hellostatistics.logger.ServerLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.utiltool.GZipUtil;
+import qaservice.WebServer.cryptography.MessageDigestTypeSHA256;
+import qaservice.WebServer.dbconnect.DBConnectionOperation;
+import qaservice.WebServer.logger.ServerLogger;
 
 public class QuestionTableAccessor {
 	public static enum QuestionTableColoumn {

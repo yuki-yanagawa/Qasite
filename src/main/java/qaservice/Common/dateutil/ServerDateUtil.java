@@ -4,8 +4,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-import datasheet.hellostatistics.propreader.ServerPropKey;
-import datasheet.hellostatistics.propreader.ServerPropReader;
+import qaservice.WebServer.propreader.ServerPropKey;
+import qaservice.WebServer.propreader.ServerPropReader;
 
 public class ServerDateUtil {
 	public static DateTimeFormatter dtf_;

@@ -10,11 +10,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import datasheet.hellostatistics.dbconnect.DBConnectionOperation;
-import datasheet.hellostatistics.logger.ServerLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.dbaccesor.cashe.TimestampWrapCahse;
 import qaservice.Common.model.user.UserInfo;
+import qaservice.WebServer.dbconnect.DBConnectionOperation;
+import qaservice.WebServer.logger.ServerLogger;
 
 public class AnswerTableAccessor {
 	private static Map<Integer, Map<String, TimestampWrapCahse<Integer>>> poinActCasheByAnswerId_;

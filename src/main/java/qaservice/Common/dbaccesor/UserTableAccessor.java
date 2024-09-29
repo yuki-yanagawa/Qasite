@@ -7,10 +7,10 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-import datasheet.hellostatistics.dbconnect.DBConnectionOperation;
-import datasheet.hellostatistics.logger.ServerLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.model.user.UserInfo;
+import qaservice.WebServer.dbconnect.DBConnectionOperation;
+import qaservice.WebServer.logger.ServerLogger;
 
 public class UserTableAccessor {
 	public static enum UserTableColoumn {
