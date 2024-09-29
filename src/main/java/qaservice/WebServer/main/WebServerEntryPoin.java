@@ -10,7 +10,7 @@ import qaservice.WebServer.gui.GuiMainFrame;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
-public class HelloStatisticsWorld {
+public class WebServerEntryPoin {
 	private static PrintStream consoleOutStream_;
 	private static FileOutputStream fileOutputStream_;
 	public static void main(String[] args) {
