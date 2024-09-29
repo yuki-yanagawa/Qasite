@@ -1,0 +1,31 @@
+form {
+    height: 95%;
+    width: 95%;
+    margin: 0 auto;
+    margin-top: 10px;
+}
+
+/* form .form-group{
+    height: 90%;
+} */
+
+form .form-group .form-control {
+    height: 85%;
+}
+
+.form-group label {
+    font-weight: bold;
+}
+
+.form-group {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+#inputTextArea {
+    margin: 0 auto;
+}
+
+.buttonDisplayNone {
+    display: none;
+}

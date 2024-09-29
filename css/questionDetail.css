@@ -1,0 +1,99 @@
+body {
+    background-color: #edf4fc;
+    font-family: sans-serif;
+    /* #f8f9fa is nav back color */
+    height: 100vh;
+}
+
+#mainNavbar {
+    font-size: 1.5rem;
+    font-weight: 100;
+}
+
+#navPostQuestButton {
+    font-size: 0.8rem;
+}
+
+.container {
+    /* height:70vh; */
+    padding-top: 10px;
+}
+
+.card .card-header {
+    padding-top: 10px;
+    padding-bottom: 0px;
+    border: none;
+    background-color: white;
+}
+
+.card .card-header #questionDate {
+    font-size: 0.8rem;
+}
+
+form {
+    height: 100%;
+}
+
+form .form-group{
+    height: 90%;
+}
+
+form .form-group .form-control {
+    height: 85%;
+}
+
+.form-group label {
+    font-weight: bold;
+}
+
+.form-group {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.container-fluid {
+    position: sticky;
+    top : 100vh;
+}
+
+.block {
+    position: absolute;
+    height: 100vh;
+    background-color: rgb(184, 178, 178);
+    opacity: 50%;
+}
+
+.spinner-border {
+    width: 4rem;
+    height: 4rem;
+}
+
+.text-center {
+    position: relative;
+    top : 30vh;
+}
+
+#answerDate {
+    font-size: 0.8rem;
+}
+
+#helpfulAct {
+    cursor: pointer;;
+}
+
+#helpfulNoAct {
+    cursor: pointer;;
+}
+
+#goodAct {
+    cursor: pointer;;
+}
+
+#goodNoAct {
+    cursor: pointer;;
+}
+
+#questionUserName {
+    cursor: pointer;
+    
+}

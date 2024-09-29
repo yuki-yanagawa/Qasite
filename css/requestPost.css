@@ -1,0 +1,59 @@
+body {
+    background-color: #edf4fc;
+    font-family: sans-serif;
+    /* #f8f9fa is nav back color */
+    height: 100vh;
+}
+
+#mainNavbar {
+    font-size: 1.5rem;
+    font-weight: 100;
+}
+
+.container {
+    /* height:70vh; */
+    padding-top: 10px;
+}
+
+form {
+    height: 100%;
+}
+
+form .form-group{
+    height: 100%;
+}
+
+form .form-group .form-control {
+    height: 85%;
+}
+
+.form-group label {
+    font-weight: bold;
+}
+
+.form-group {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+#inputTitleAreaWrap {
+    padding-bottom: 10px;
+}
+
+#inputPreview a {
+    color : blue;
+    cursor: pointer;
+}
+
+#inputPreview a:hover {
+    text-decoration:underline;
+}
+
+.input-group.type-quest {
+    width: 50%;
+}
+
+.container-fluid {
+    position: sticky;
+    top : 100vh;
+}

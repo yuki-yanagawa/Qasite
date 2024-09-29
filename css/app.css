@@ -1,0 +1,188 @@
+body {
+    background-color: #edf4fc;
+    font-family: sans-serif;
+    /* #f8f9fa is nav back color */
+}
+
+#mainNavbar {
+    font-size: 1.5rem;
+    font-weight: 100;
+}
+
+/* #mainNavbar .navbar-brand {
+    color: #ea1c2c;
+    font-size: 1.5rem;
+}
+
+#mainNavbar .nav-link {
+    color: white;
+}
+
+#mainNavbar .nav-link:hover {
+    color: #ea1c2c;
+} */
+
+#addon-wrapping {
+    cursor: pointer;
+}
+
+.navbar-nav .nav-link:hover {
+    cursor: pointer;
+}
+
+.dropdown-item:hover {
+    background-color: #edf4fc;
+    cursor: pointer;
+}
+/* #dropdownNav::after {
+    color: white;
+} */
+
+#navCheckGroup {
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+#navPostQuestButton {
+    padding-left: 0px;
+    /* padding-right: 0px; */
+    font-size: 0.8rem;
+}
+
+.card.quest{
+    background-color: white;
+    font-size: 1.0rem;
+}
+
+.card.quest .card-body {
+    padding-top: 20px;
+    padding-bottom: 5px;
+}
+
+.card.quest .card-body a {
+    font-weight: bold;
+}
+
+.card.quest .card-body-genre {
+    border: none;
+    background-color: white;
+    font-size: 0.8rem;
+}
+
+.card.quest .card-footer {
+    padding-top: 0px;
+    border: none;
+    background-color: white;
+    font-size: 0.8rem;
+}
+
+.card.console {
+    font-size: 11pt;
+    font-family: Inconsolata, monospace;
+    color: white;
+    background-color: black;
+}
+
+.card.console .card-body {
+    padding: .1em 1.5em 1em 1em;
+}
+
+.card.console .card-body output {
+    clear: both;
+    width: 100%;
+}
+
+.card.console .card-body output h3 {
+    margin: 0;
+}
+
+.card.console .card-body output pre {
+    margin: 0;
+}
+
+.card.console .card-body .input-line {
+    display: -webkit-box;
+    -webkit-box-orient: horizontal;
+    -webkit-box-align: stretch;
+    display: -moz-box;
+    -moz-box-orient: horizontal;
+    -moz-box-align: stretch;
+    display: box;
+    box-orient: horizontal;
+    box-align: stretch;
+    clear: both;
+}
+
+.card.console .card-body .input-line > div:nth-child(2) {
+    -webkit-box-flex: 1;
+    -moz-box-flex: 1;
+    box-flex: 1;
+}
+
+.card.console .card-body .prompt {
+    white-space: nowrap;
+    color: #96b38a;
+    margin-right: 7px;
+    display: -webkit-box;
+    -webkit-box-pack: center;
+    -webkit-box-orient: vertical;
+    display: -moz-box;
+    -moz-box-pack: center;
+    -moz-box-orient: vertical;
+    display: box;
+    box-pack: center;
+    box-orient: vertical;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}
+
+.card.console .card-body .cmdline {
+    outline: none;
+    background-color: transparent;
+    margin: 0;
+    width: 100%;
+    font: inherit;
+    border: none;
+    color: inherit;
+}
+
+.container-fluid {
+    position: sticky;
+    top : 100vh;
+}
+
+.container-fluid .mt-5 {
+    margin-top: 1rem !important;
+}
+
+.block {
+    position: absolute;
+    height: 100vh;
+    background-color: rgb(184, 178, 178);
+    opacity: 50%;
+}
+
+.spinner-border {
+    width: 4rem;
+    height: 4rem;
+}
+
+.container {
+    height: 60vh;
+}
+
+.text-center {
+    position: relative;
+    top : 30vh;
+}
+
+#navUserInfoGroup {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+#userCircleSvg {
+    color : blue;
+    cursor: pointer;
+}
