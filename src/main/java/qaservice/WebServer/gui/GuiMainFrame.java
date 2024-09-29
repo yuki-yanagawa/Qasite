@@ -67,7 +67,7 @@ public class GuiMainFrame extends JFrame implements ActionListener{
 	
 
 	public GuiMainFrame() {
-		super("hello statistics world = Server");
+		super("Web Server");
 		buttonPanel_ = new JPanel();
 		labelPanel_ = new JPanel();
 		progressBarPanel_ = new JPanel();
