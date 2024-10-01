@@ -2,7 +2,6 @@ package qaservice.WebServer.mainserver.taskhandle.http;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,8 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.dbaccesor.AnswerTableAccessor;
-import qaservice.Common.dbaccesor.QuestionTableAccessor;
-import qaservice.Common.dbaccesor.UserTableAccessor;
 import qaservice.Common.model.user.UserInfo;
 import qaservice.Common.utiltool.GZipUtil;
 import qaservice.WebServer.accessDBServer.AnswerDataLogic;
@@ -226,9 +223,9 @@ class HttpRoutingMethodList {
 			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		byte[] imgData = requestMess.getRequestBodyDataByKey("textImage", false);
-		//GZIP adjust
+
+		//Data compressed
 		imgData = GZipUtil.compressed(imgData);
-		//imgData = GZipUtil.decompressed(imgData);
 		boolean result = QuestionDataLogic.insertQuestionImgData(imgData, questionId);
 		if(result) {
 			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
@@ -326,7 +323,7 @@ class HttpRoutingMethodList {
 		if(questionId < 0) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "question id getting error from requestparameter", nowActiveMethod());
 		}
-		String cookie = requestMess.getRequestHeaderValue(RequsetHeaderType.Cookie);
+//		String cookie = requestMess.getRequestHeaderValue(RequsetHeaderType.Cookie);
 //		byte[] fileByteData = null;
 //		if(!"".equals(cookie)) {
 //			String username = SessionOperator.getUserDataFromSession(cookie);
@@ -347,6 +344,7 @@ class HttpRoutingMethodList {
 	
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getQuestionDetail/*")
 	static ResponseMessage getQuestionDetailData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		boolean enabledGzipCompressed = acceptableGZIPcompressedBodyData(requestMess);
 		String requestPath = requestMess.getRequestPath();
 		int questionId = -1;
 		Pattern pattern = Pattern.compile("/getQuestionDetail/([0-9]+)");
@@ -362,9 +360,13 @@ class HttpRoutingMethodList {
 		if(questionId < 0) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "question id getting error from requestparameter", nowActiveMethod());
 		}
+
 		Map<String, Object> detailDataMap = QuestionDataLogic.getQuestionDetailData(questionId);
 		byte[] bytes = createJsonData(detailDataMap);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		if(enabledGzipCompressed) {
+			bytes = GZipUtil.compressed(bytes);
+		}
+		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol(), enabledGzipCompressed);
 	}
 	
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/postAnswer/*")
@@ -1055,5 +1057,18 @@ class HttpRoutingMethodList {
 			return null;
 		}
 		return UserDataLogic.getUserInfoDataByUsername(userName);
+	}
+
+	private static boolean acceptableGZIPcompressedBodyData(RequestMessage requestMess) {
+		String acceptableEncondingDataStr = requestMess.getRequestHeaderValue(RequsetHeaderType.AcceptEncoding);
+		if(acceptableEncondingDataStr == null) {
+			return false;
+		}
+		for(String acceptEncoding : acceptableEncondingDataStr.split(",")) {
+			if("GZIP".equals(acceptEncoding.trim().toUpperCase())) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

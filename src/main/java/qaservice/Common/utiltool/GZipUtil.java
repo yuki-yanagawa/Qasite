@@ -25,13 +25,10 @@ public class GZipUtil {
 			ByteArrayInputStream bis = new ByteArrayInputStream(data);
 			GZIPInputStream gip = new GZIPInputStream(bis)) {
 			int len;
-			int dataSize = 0;
 			byte[] tmpBytes = new byte[2048];
 			while((len = gip.read(tmpBytes)) != -1) {
-				byteArrayOut.write(tmpBytes);
-				dataSize += len;
+				byteArrayOut.write(tmpBytes, 0, len);
 			}
-			gip.close();
 			return byteArrayOut.toByteArray();
 		} catch(IOException e) {
 			e.printStackTrace();

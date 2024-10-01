@@ -113,4 +113,9 @@ public class ResponseMessageCreator {
 		//return "Set-Cookie: " + cookie + RESPONSE_LINE_SEPARATOR;
 		return "Set-Cookie: sessionid=" + cookie + RESPONSE_LINE_SEPARATOR;
 	}
+
+	static String createContentEncodingGzip() {
+		//Antivirus software may over write x-content-encoding-over-network
+		return "Content-Encoding: gzip" + RESPONSE_LINE_SEPARATOR;
+	}
 }

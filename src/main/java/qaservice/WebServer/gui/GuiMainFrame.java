@@ -20,9 +20,6 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.Timer;
 
-import org.h2.command.query.SelectListColumnResolver;
-
-import qaservice.DBServer.main.DBServerMain;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
 import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.mainserver.ServerOperator;

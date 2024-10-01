@@ -14,11 +14,17 @@ public class ResponseMessage {
 	private String locationPath_;
 	private String registSessionId_;
 	private ResonseStatusLine statusLine_;
+	private boolean isCompressedBodyData_;
 	
 	public ResponseMessage(ResponseContentType type, byte[] body, String httpProtocol) {
+		this(type, body, httpProtocol, false);
+	}
+
+	public ResponseMessage(ResponseContentType type, byte[] body, String httpProtocol, boolean isCompressed) {
 		type_ = type;
 		body_ = body;
 		httpProtocol_ = httpProtocol;
+		isCompressedBodyData_ = isCompressed;
 	}
 	
 	public ResponseMessage(ResponseContentType type, byte[] body, String httpProtocol, String locationPath) {
@@ -61,6 +67,9 @@ public class ResponseMessage {
 			}
 			if(registSessionId_ != null) {
 				sb.append(ResponseMessageCreator.createHeaderSetCookie(registSessionId_));
+			}
+			if(isCompressedBodyData_) {
+				sb.append(ResponseMessageCreator.createContentEncodingGzip());
 			}
 			if(body_ == null) {
 				sb.append(ResponseMessageCreator.END_CODE);

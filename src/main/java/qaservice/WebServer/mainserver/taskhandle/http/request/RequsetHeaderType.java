@@ -6,6 +6,7 @@ public enum RequsetHeaderType {
 	Cookie("COOKIE"),
 	ContentLength("CONTENT-LENGTH"),
 	ContentType("CONTENT-TYPE"),
+	AcceptEncoding("ACCEPT-ENCODING"),
 	Connection("CONNECTION");
 	
 	private String name_;
