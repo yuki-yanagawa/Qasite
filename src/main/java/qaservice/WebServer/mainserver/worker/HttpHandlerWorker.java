@@ -1,10 +1,15 @@
 package qaservice.WebServer.mainserver.worker;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 
 import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.mainserver.IServer;
 import qaservice.WebServer.mainserver.taskhandle.http.HttpTaskHandle;
+import qaservice.WebServer.propreader.ServerPropKey;
+import qaservice.WebServer.propreader.ServerPropReader;
 
 class HttpHandlerWorker extends Thread {
 	private IServer server_;
@@ -12,8 +17,10 @@ class HttpHandlerWorker extends Thread {
 	private boolean polling_;
 	private String threadName_;
 	private Thread runningThread_;
+	private int keepAliveTimeOutmsec_;
 	HttpHandlerWorker(String threadName) {
 		threadName_ = threadName;
+		keepAliveTimeOutmsec_ = Integer.parseInt(ServerPropReader.getProperties(ServerPropKey.KeepAliveTimeOut.getKey()).toString());
 		workStart();
 	}
 	
@@ -53,7 +60,10 @@ class HttpHandlerWorker extends Thread {
 			try(Socket clientSocket = server_.awaitRequest();){
 				changeLeaderResult = HttpHandlerWorkerOperation.promptLeaderThread();
 				if(changeLeaderResult) {
-					HttpTaskHandle.httpHandleThread(clientSocket);
+					//HttpTaskHandle.httpHandleThread(clientSocket);
+					clientSocket.setKeepAlive(true);
+					clientSocket.setSoTimeout(keepAliveTimeOutmsec_ * 1000);
+					httpRequestHandle(clientSocket);
 				} else {
 					//Handle Full Task Response
 				}
@@ -64,6 +74,21 @@ class HttpHandlerWorker extends Thread {
 			if(changeLeaderResult) {
 				releaseAcceptTask();
 			}
+		}
+	}
+
+	private void httpRequestHandle(Socket socket) {
+		int expected = 1024;
+		try(InputStream is = socket.getInputStream();
+			OutputStream os = socket.getOutputStream()) {
+			boolean keepAlive = HttpTaskHandle.httpHandleThread(is, os);
+			while(socket.getKeepAlive() && expected > 0) {
+				keepAlive = HttpTaskHandle.httpHandleThread(is, os);
+				expected--;
+			}
+			socket.close();
+		} catch(IOException e) {
+			e.printStackTrace();
 		}
 	}
 

@@ -3,6 +3,7 @@ package qaservice.WebServer.propreader;
 public enum ServerPropKey {
 	ServerWorkerThreadCount("httpWorkerThreadCount"),
 	ServerHost("serverHost"),
+	ServerDefaultPortSetting("serverPortDefaultSettiing"),
 	ServerName("hostName"),
 	DateFormat("dateTimeFormat"),
 	TimeZone("zoneTime"),
@@ -10,6 +11,8 @@ public enum ServerPropKey {
 	LogStackTrace("logStackTrace"),
 	ReadBuffer("httpServerReadBuffer"),
 	ReadTimeOut("httpServerReadTimeOut"),
+	KeepAliveTimeOut("keepAliveTimeOut"),
+	KeepAliveMaxResource("keepAliveMaxResource"),
 	WithDBServerStart("withDBServerStart"),
 	ConnectionPoolCount("connectionPoolCount"),
 	DBServerConnetionPath("dbconnetionPath"),

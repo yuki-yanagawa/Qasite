@@ -5,10 +5,18 @@ import java.io.IOException;
 
 import qaservice.Common.dateutil.ServerDateUtil;
 import qaservice.WebServer.mainserver.ServerOperator;
+import qaservice.WebServer.propreader.ServerPropKey;
+import qaservice.WebServer.propreader.ServerPropReader;
 
 public class ResponseMessageCreator {
 	static final String RESPONSE_LINE_SEPARATOR = "\r\n";
 	static final String END_CODE = "\r\n\r\n";
+	static final String KEEPALIVE_TIME;
+	static final String KEEPALIVE_MAX_RESOURCE;
+	static {
+		KEEPALIVE_TIME = ServerPropReader.getProperties(ServerPropKey.KeepAliveTimeOut.getKey()).toString();
+		KEEPALIVE_MAX_RESOURCE = ServerPropReader.getProperties(ServerPropKey.KeepAliveMaxResource.getKey()).toString();
+	}
 	public static byte[] createResponseMessage(ResonseStatusLine statusLine, String httpPlotocol) {
 		return createResponseMessage(statusLine, httpPlotocol, null);
 //		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -114,8 +122,17 @@ public class ResponseMessageCreator {
 		return "Set-Cookie: sessionid=" + cookie + RESPONSE_LINE_SEPARATOR;
 	}
 
-	static String createContentEncodingGzip() {
+	static String createHeaderContentEncodingGzip() {
 		//Antivirus software may over write x-content-encoding-over-network
 		return "Content-Encoding: gzip" + RESPONSE_LINE_SEPARATOR;
+	}
+
+	static String createHeaderConnectionKeepAlive() {
+		return "Connection: Keep-Alive" + RESPONSE_LINE_SEPARATOR
+				+ "Keep-alive: timeout=" + KEEPALIVE_TIME + ",max=" + KEEPALIVE_MAX_RESOURCE + RESPONSE_LINE_SEPARATOR;
+	}
+
+	static String createHeaderConnectionClose() {
+		return "Connection: close" + RESPONSE_LINE_SEPARATOR;
 	}
 }

@@ -46,7 +46,7 @@ public class ResponseMessage {
 		return this;
 	}
 	
-	public byte[] createResponseMessage() throws HttpRequestHandlingException {
+	public byte[] createResponseMessage(boolean isKeepAlive) throws HttpRequestHandlingException {
 		if(locationPath_ != null) {
 			return createResponseLocationMessage(locationPath_);
 		}
@@ -69,7 +69,12 @@ public class ResponseMessage {
 				sb.append(ResponseMessageCreator.createHeaderSetCookie(registSessionId_));
 			}
 			if(isCompressedBodyData_) {
-				sb.append(ResponseMessageCreator.createContentEncodingGzip());
+				sb.append(ResponseMessageCreator.createHeaderContentEncodingGzip());
+			}
+			if(isKeepAlive) {
+				sb.append(ResponseMessageCreator.createHeaderConnectionKeepAlive());
+			} else {
+				sb.append(ResponseMessageCreator.createHeaderConnectionClose());
 			}
 			if(body_ == null) {
 				sb.append(ResponseMessageCreator.END_CODE);
