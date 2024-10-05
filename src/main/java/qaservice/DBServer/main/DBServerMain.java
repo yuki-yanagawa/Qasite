@@ -20,7 +20,8 @@ import qaservice.DBServer.worker.rankcheck.RankCheckWorker;
 
 public class DBServerMain {
 	public static void main(String[] args) throws Exception {
-		DBServerMainGuiStart.guiConsoleOut("DB Server Starting.....");
+		boolean guiStartFlg = args == null ? true : false;
+		if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut("DB Server Starting.....");
 		//DB Server Stop Key
 		try {
 			KeysOperation.initialize();
@@ -28,7 +29,7 @@ public class DBServerMain {
 			e.printStackTrace();
 			return;
 		}
-		DBServerMainGuiStart.guiConsoleOut("Key initialize end....");
+		if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut("Key initialize end....");
 
 		//DB Server Start
 		boolean keyGen = Boolean.parseBoolean(DBServerPropReader.getProperties("everyKeyGenerate").toString());
@@ -38,13 +39,13 @@ public class DBServerMain {
 			dbServ.start(port, keyGen);
 		} catch(Throwable e) {
 			//e.printStackTrace();
-			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
+			if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			return;
 		}
 
 		//Rank Check Worker Start
 		new RankCheckWorker().start();
-		DBServerMainGuiStart.guiConsoleOut("db server start!!!!");
+		if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut("db server start!!!!");
 		//Server Strop Operator Reciver
 		new DBServerOperationReciver(dbServ).start();
 

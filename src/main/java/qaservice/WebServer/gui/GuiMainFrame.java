@@ -22,6 +22,7 @@ import javax.swing.Timer;
 
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
 import qaservice.WebServer.logger.ServerLogger;
+import qaservice.WebServer.main.WebServerStartingOperation;
 import qaservice.WebServer.mainserver.ServerOperator;
 import qaservice.WebServer.mainserver.taskhandle.http.FileReadCasheClear;
 import qaservice.WebServer.propreader.ServerPropKey;
@@ -140,7 +141,7 @@ public class GuiMainFrame extends JFrame implements ActionListener{
 				switch(CURRENT_TASK_STAGE) {
 					case FIRST_STAGE : {
 						startButton_.setEnabled(false);
-						serverLoggerSettingOn();
+						WebServerStartingOperation.serverLoggerSettingOn();
 						progressBar_.setValue(20);
 						CURRENT_TASK_STAGE++;
 						nextTask();
@@ -377,14 +378,14 @@ public class GuiMainFrame extends JFrame implements ActionListener{
 		}
 	}
 	
-	private static void serverLoggerSettingOn() {
-		//Server logger create Instance
-		ServerLogger.getInstance().appLog("+++++++++ Hello Statistics World ++++++++++");
-		ServerLogger.getInstance().appLog("     *   *                 *    *          ");
-		ServerLogger.getInstance().appLog("     *****                 ******          ");
-		ServerLogger.getInstance().appLog("                                           ");
-		ServerLogger.getInstance().appLog("           ***************                 ");
-	}
+//	private static void serverLoggerSettingOn() {
+//		//Server logger create Instance
+//		ServerLogger.getInstance().appLog("+++++++++ Hello Statistics World ++++++++++");
+//		ServerLogger.getInstance().appLog("     *   *                 *    *          ");
+//		ServerLogger.getInstance().appLog("     *****                 ******          ");
+//		ServerLogger.getInstance().appLog("                                           ");
+//		ServerLogger.getInstance().appLog("           ***************                 ");
+//	}
 	
 	private static void serverLoggerSettingOff() {
 		//Server logger create Instance

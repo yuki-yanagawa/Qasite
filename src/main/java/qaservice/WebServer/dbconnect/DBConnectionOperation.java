@@ -26,8 +26,7 @@ public class DBConnectionOperation {
 	}
 	
 	public void createConnectionPool(String dbPath) {
-		if(!"qaservice.WebServer.gui.GuiMainFrame"
-				.equals(Thread.currentThread().getStackTrace()[2].getClassName())) {
+		if(!enabledCreateDBConnectionFucntionCalled()) {
 			return;
 		}
 		int conetionPoolCount = Integer.parseInt(ServerPropReader.getProperties(ServerPropKey.ConnectionPoolCount.getKey()).toString());
@@ -52,8 +51,7 @@ public class DBConnectionOperation {
 	}
 	
 	public void connectionPoolClose() {
-		if(!"qaservice.WebServer.gui.GuiMainFrame"
-				.equals(Thread.currentThread().getStackTrace()[2].getClassName())) {
+		if(!enabledCreateDBConnectionFucntionCalled()) {
 			return;
 		}
 		try {
@@ -88,5 +86,14 @@ public class DBConnectionOperation {
 		dbConnectionPool_.entrySet().forEach(e -> {
 			System.out.println(e.getKey() + "/" + e.getValue());
 		});
+	}
+
+	private static boolean enabledCreateDBConnectionFucntionCalled() {
+		System.out.println(Thread.currentThread().getStackTrace()[3].getClassName());
+		if("qaservice.WebServer.gui.GuiMainFrame".equals(Thread.currentThread().getStackTrace()[3].getClassName()) ||
+			"qaservice.WebServer.main.WebServerStartingOperation".equals(Thread.currentThread().getStackTrace()[3].getClassName())) {
+			return true;
+		}
+		return false;
 	}
 }
