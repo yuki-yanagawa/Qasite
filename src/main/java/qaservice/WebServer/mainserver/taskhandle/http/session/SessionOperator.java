@@ -42,9 +42,9 @@ public class SessionOperator {
 	}
 
 	public static String getUserDataFromSession(String cookie) {
-		sessionUserMap_.entrySet().forEach(e -> {
-			System.out.println(e.getKey() + " : " + e.getValue());
-		});
+//		sessionUserMap_.entrySet().forEach(e -> {
+//			System.out.println(e.getKey() + " : " + e.getValue());
+//		});
 		String sessionId = getSessionIdFromCookie(cookie);
 		return sessionUserMap_.get(sessionId);
 	}

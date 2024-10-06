@@ -38,7 +38,7 @@ public class DBServerMain {
 		try {
 			dbServ.start(port, keyGen);
 		} catch(Throwable e) {
-			//e.printStackTrace();
+			e.printStackTrace();
 			if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			return;
 		}

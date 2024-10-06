@@ -10,7 +10,6 @@ class RequestLine {
 	RequestLine(String requestLine) throws HttpRequestHandlingException {
 		String[] tmp = requestLine.split("\\s+");
 		if(tmp.length != 3) {
-			System.out.println("requestLine !!!! : " + requestLine);
 			throw new HttpRequestHandlingException("request Line create Error");
 		}
 		method_ = RequestHttpMethod.createHttpMethod(tmp[0]);

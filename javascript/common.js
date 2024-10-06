@@ -47,7 +47,7 @@ function adjustPreviweTextCreate(inputText) {
 
 
 async function digestMessageSHA256(message) {
-    if(crypto.subtle === undefined) {
+    if(!window.isSecureContext || crypto.subtle === undefined) {
         return message;
     }
     const msgUint8 = new TextEncoder().encode(message);                           // encode as (utf-8) Uint8Array
@@ -60,10 +60,10 @@ async function digestMessageSHA256(message) {
 function changeStatisticsType(num) {
     let number = Number(num);
     if(number === 1) {
-        return '統計基礎';
+        return 'タイプ1';
     } else if(number === 2) {
-        return '医療統計';
+        return 'タイプ2';
     } else {
-        return 'その他';
+        return 'タイプ3';
     }
 }

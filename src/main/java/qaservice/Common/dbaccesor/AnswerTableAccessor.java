@@ -44,37 +44,10 @@ public class AnswerTableAccessor {
 		}
 	}
 
-//	private static void initializeCasheData() {
-//		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
-//		Connection conn = dbConnOpe.getConnetion();
-//		String actionSql = "SELECT A.ANSWERID,"
-//				+ " SUM(CASE WHEN AG.GOOD_ACTION_USER_ID = 0 THEN 0 ELSE 1 END) AS GOOD_ACT_SUM,"
-//				+ " SUM(CASE WHEN AH.HELPFUL_ACTION_USER_ID = 0 THEN 0 ELSE 1 END) AS HELPFUL_ACT_SUM"
-//				+ " FROM ANSWERTABLE AS A"
-//				+ " LEFT OUTER JOIN ANSWERGOODPOINTTABLE AS AG ON A.ANSWERID = AG.ANSWERID AND AG.GOOD_ACTION = true"
-//				+ " LEFT OUTER JOIN ANSWERHELPFULPOINTTABLE AS AH ON A.ANSWERID = AH.ANSWERID AND AH.GOOD_ACTION = true"
-//				+ " GROUP BY A.ANSWERID";
-//		try (PreparedStatement ps = conn.prepareStatement(actionSql)) {
-//			ResultSet rs = ps.executeQuery();
-//			while(rs.next()) {
-//				int answerId = rs.getInt(1);
-//				if(!poinActCasheByAnswerId_.containsKey(answerId)) {
-//					Map<String, TimestampWrapCahse<Integer>> pointMap = new HashMap<>();
-//					//poinActCasheByAnswerId_.put(key, value)
-//				}
-//				//poinActCasheByAnswerId_.put(rs.ge, value)
-//			}
-//		} catch(SQLException e) {
-//			
-//		} finally {
-//			dbConnOpe.endUsedConnctionNotify(conn);
-//		}
-//		
-//	}
-
 	public static Map<Integer, Map<String, Object>> getAnswerIdAndLatestUpdateDateGroupingQuestionId(Connection conn) {
 		if(conn == null) {
-			ServerLogger.getInstance().warn("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId DB connection Error");
+//			ServerLogger.getInstance().warn("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId DB connection Error");
+			System.err.println("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId DB connection Error");
 			return new HashMap<>();
 		}
 //		String sql = "SELECT A.QUESTIONID, A.ANSWERID, A.UPDATE_DATE FROM ANSWERTABLE AS A" 
@@ -91,7 +64,9 @@ public class AnswerTableAccessor {
 				retMap.put(rs.getInt(1), innerMap);
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId Error");
+//			ServerLogger.getInstance().warn(e, "AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId Error");
+			System.err.println("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId Error");
+			e.printStackTrace();
 			return new HashMap<>();
 		}
 		return retMap;
@@ -112,7 +87,9 @@ public class AnswerTableAccessor {
 				retMap.put(rs.getInt(1), innerMap);
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "AnswerTable access getAnswerCountByQuestionId Error");
+//			ServerLogger.getInstance().warn(e, "AnswerTable access getAnswerCountByQuestionId Error");
+			System.err.println("AnswerTable access getAnswerCountByQuestionId Error");
+			e.printStackTrace();
 			return new HashMap<>();
 		}
 		return retMap;
@@ -121,13 +98,15 @@ public class AnswerTableAccessor {
 	public static int insertAnswer(Connection conn, byte[] answerData, int questionId, UserInfo userInfo) {
 		int newId = getRegistNumber(conn);
 		if(newId == -1) {
-			ServerLogger.getInstance().warn("new id getting Error");
+			//ServerLogger.getInstance().warn("new id getting Error");
+			System.err.println("new id getting Error");
 			return -1;
 		}
 		
 		int userId = userInfo.getUserId();
 		if(userId == -1) {
-			ServerLogger.getInstance().warn("user id getting Error");
+//			ServerLogger.getInstance().warn("user id getting Error");
+			System.err.println("user id getting Error");
 			return -1;
 		}
 
@@ -143,12 +122,15 @@ public class AnswerTableAccessor {
 			ps.setTimestamp(parameterIndex++, new Timestamp(System.currentTimeMillis()));
 			int result = ps.executeUpdate();
 			if(result != 1) {
-				ServerLogger.getInstance().warn("Insert Error");
+//				ServerLogger.getInstance().warn("Insert Error");
+				System.err.println("Insert Error");
 				return -1;
 			}
 			return newId;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "Insert Error");
+			System.err.println("Insert Error");
+			e.printStackTrace();
+//			ServerLogger.getInstance().warn(e, "Insert Error");
 			return -1;
 		}
 	}
@@ -185,7 +167,9 @@ public class AnswerTableAccessor {
 				}
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "getQuestionDetailData error. data base connection");
+//			ServerLogger.getInstance().warn(e, "getQuestionDetailData error. data base connection");
+			System.err.println("Insert Error");
+			e.printStackTrace();
 			return new ArrayList<>();
 		} 
 
@@ -228,7 +212,9 @@ public class AnswerTableAccessor {
 			}
 			return retList;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "getQuestionDetailData error. data base connection");
+//			ServerLogger.getInstance().warn(e, "getQuestionDetailData error. data base connection");
+			System.err.println("getQuestionDetailData error. data base connection");
+			e.printStackTrace();
 			return new ArrayList<>();
 		}
 	}
@@ -254,7 +240,9 @@ public class AnswerTableAccessor {
 			}
 			ps.executeUpdate();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "good action regist error");
+//			ServerLogger.getInstance().warn(e, "good action regist error");
+			System.err.println("good action regist error");
+			e.printStackTrace();
 			return -1;
 		}
 
@@ -267,7 +255,9 @@ public class AnswerTableAccessor {
 			}
 			return -1;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "good action regist error");
+//			ServerLogger.getInstance().warn(e, "good action regist error");
+			System.err.println("good action regist error");
+			e.printStackTrace();
 			return -1;
 		} finally {
 			dbConnOpe.endUsedConnctionNotify(conn);
@@ -277,7 +267,8 @@ public class AnswerTableAccessor {
 	public static synchronized int helpfulAction(Connection conn, int answerId, String username, int actionResult) {
 		int userId = UserTableAccessor.getUserIdByUserName(conn, username);
 		if(userId == -1) {
-			ServerLogger.getInstance().warn("good action userid getting error");
+//			ServerLogger.getInstance().warn("good action userid getting error");
+			System.err.println("good action userid getting error");
 			return -1;
 		}
 
@@ -298,7 +289,9 @@ public class AnswerTableAccessor {
 			}
 			ps.executeUpdate();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "good action regist error");
+//			ServerLogger.getInstance().warn(e, "good action regist error");
+			System.err.println("good action userid getting error");
+			e.printStackTrace();
 			return -1;
 		}
 
@@ -311,7 +304,9 @@ public class AnswerTableAccessor {
 			}
 			return -1;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "good action regist error");
+//			ServerLogger.getInstance().warn(e, "good action regist error");
+			System.err.println("good action regist error");
+			e.printStackTrace();
 			return -1;
 		}
 	}
@@ -329,7 +324,9 @@ public class AnswerTableAccessor {
 				try {
 					return goodActionRegistFromCashe(conn, answerId, userId);
 				} catch(SQLException e) {
-					ServerLogger.getInstance().warn(e, "good action regist error");
+//					ServerLogger.getInstance().warn(e, "good action regist error");
+					System.err.println("good action regist error");
+					e.printStackTrace();
 					return -1;
 				}
 			} else {
@@ -360,7 +357,9 @@ public class AnswerTableAccessor {
 			ps.setInt(setIndex++, userId);
 			ps.executeUpdate();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "good action delete error");
+//			ServerLogger.getInstance().warn(e, "good action delete error");
+			System.err.println("good action delete error");
+			e.printStackTrace();
 			return -1;
 		}
 
@@ -384,7 +383,9 @@ public class AnswerTableAccessor {
 				ps.setBoolean(setIndex++, true);
 				ps.executeUpdate();
 			} catch(SQLException e) {
-				ServerLogger.getInstance().warn(e, "good action regist error");
+//				ServerLogger.getInstance().warn(e, "good action regist error");
+				System.err.println("good action regist error");
+				e.printStackTrace();
 				conn.rollback();
 				return -1;
 			}
@@ -422,7 +423,9 @@ public class AnswerTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "AnswerTable Insert ImgData Error.");
+//			ServerLogger.getInstance().warn(e, "AnswerTable Insert ImgData Error.");
+			System.err.println("AnswerTable Insert ImgData Error.");
+			e.printStackTrace();
 		}
 		return false;
 	}
@@ -437,7 +440,9 @@ public class AnswerTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "AnswerTable User Check Error.");
+//			ServerLogger.getInstance().warn(e, "AnswerTable User Check Error.");
+			System.err.println("AnswerTable User Check Error.");
+			e.printStackTrace();
 		}
 		return false;
 	}
@@ -452,7 +457,9 @@ public class AnswerTableAccessor {
 				return false;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "AnswerTable revert Error.");
+//			ServerLogger.getInstance().warn(e, "AnswerTable revert Error.");
+			System.err.println("AnswerTable revert Error.");
+			e.printStackTrace();
 			return false;
 		}
 
@@ -461,7 +468,9 @@ public class AnswerTableAccessor {
 			ps.setInt(1, answerId);
 			int result = ps.executeUpdate();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "ANSWERSUBTABLEIMAGE revert Error.");
+//			ServerLogger.getInstance().warn(e, "ANSWERSUBTABLEIMAGE revert Error.");
+			System.err.println("ANSWERSUBTABLEIMAGE revert Error.");
+			e.printStackTrace();
 			return false;
 		}
 
@@ -470,7 +479,9 @@ public class AnswerTableAccessor {
 			ps.setInt(1, answerId);
 			int result = ps.executeUpdate();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "ANSWERSUBTABLEIMAGE revert Error.");
+//			ServerLogger.getInstance().warn(e, "ANSWERSUBTABLEIMAGE revert Error.");
+			System.err.println("ANSWERSUBTABLEIMAGE revert Error.");
+			e.printStackTrace();
 			return false;
 		}
 		return true;
@@ -486,7 +497,9 @@ public class AnswerTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "AnswerTable User Check Error.");
+//			ServerLogger.getInstance().warn(e, "AnswerTable User Check Error.");
+			System.err.println("AnswerTable User Check Error.");
+			e.printStackTrace();
 		}
 		return false;
 	}
@@ -505,7 +518,9 @@ public class AnswerTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "AnswerTable Insert LinkData Error.");
+//			ServerLogger.getInstance().warn(e, "AnswerTable Insert LinkData Error.");
+			System.err.println("AnswerTable Insert LinkData Error.");
+			e.printStackTrace();
 		}
 		return false;
 	}
@@ -521,7 +536,9 @@ public class AnswerTableAccessor {
 			}
 			return retMap;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "getAnswerImageData error. data base connection");
+//			ServerLogger.getInstance().warn(e, "getAnswerImageData error. data base connection");
+			System.err.println("getAnswerImageData error. data base connection");
+			e.printStackTrace();
 			return new HashMap<>();
 		}
 	}
@@ -542,7 +559,9 @@ public class AnswerTableAccessor {
 			retMap.put("answerLinkFile", retArrayList);
 			return retMap;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+//			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+			System.err.println("answerLinkFileData error. data base connection");
+			e.printStackTrace();
 			return new HashMap<>();
 		}
 	}
@@ -558,7 +577,9 @@ public class AnswerTableAccessor {
 			}
 			return goodActPatternMap;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+//			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+			System.err.println("answerLinkFileData error. data base connection");
+			e.printStackTrace();
 			return new HashMap<>();
 		}
 	}
@@ -572,7 +593,9 @@ public class AnswerTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+//			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+			System.err.println("answerLinkFileData error. data base connection");
+			e.printStackTrace();
 		}
 		return false;
 	}
@@ -593,7 +616,9 @@ public class AnswerTableAccessor {
 				}
 				ps.executeUpdate();
 			} catch(SQLException e) {
-				ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+//				ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+				System.err.println("answerLinkFileData error. data base connection");
+				e.printStackTrace();
 			}
 		}
 		int[] insertUserIds = userMap.entrySet().stream().filter(e -> e.getValue() && !userGoodActMap.containsKey(e.getKey())).mapToInt(e-> e.getKey()).toArray();
@@ -606,7 +631,9 @@ public class AnswerTableAccessor {
 				ps.setBoolean(3, true);
 				ps.executeUpdate();
 			} catch(SQLException e) {
-				ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+//				ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
+				System.err.println("answerLinkFileData error. data base connection");
+				e.printStackTrace();
 			}
 		}
 	}

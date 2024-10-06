@@ -22,9 +22,6 @@ public class RequestMessage {
 	
 	RequestMessage(byte[] requsetRawData) throws HttpRequestHandlingException {
 		String requestDataStr = new String(requsetRawData, CharUtil.getCharset());
-		//Delete!!!
-		System.out.println(requestDataStr);
-		//Delete!!!
 		String[] requestLine = requestDataStr.split(HTTP_PROTOCOL_SEPARATOR);
 		requestLine_ = new RequestLine(requestLine[0]);
 		requestHeader_ = new RequestHeader(requestLine);

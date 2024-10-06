@@ -78,17 +78,19 @@ class HttpHandlerWorker extends Thread {
 	}
 
 	private void httpRequestHandle(Socket socket) {
-		int expected = 1024;
 		try(InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream()) {
 			boolean keepAlive = HttpTaskHandle.httpHandleThread(is, os);
-			while(socket.getKeepAlive() && expected > 0) {
+			while(keepAlive) {
 				keepAlive = HttpTaskHandle.httpHandleThread(is, os);
-				expected--;
+				if(!keepAlive) {
+					os.write("".getBytes());
+				}
 			}
-			socket.close();
 		} catch(IOException e) {
 			e.printStackTrace();
+		} finally {
+			closeClientSocket(socket);
 		}
 	}
 
@@ -124,5 +126,16 @@ class HttpHandlerWorker extends Thread {
 	
 	String getThreadName() {
 		return threadName_;
+	}
+
+	private void closeClientSocket(Socket clientSocket) {
+		if(clientSocket == null) {
+			return;
+		}
+		try {
+			clientSocket.close();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

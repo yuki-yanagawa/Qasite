@@ -10,6 +10,10 @@ public class DBServerMainGuiStart {
 	}
 
 	public static void guiConsoleOut(String text) {
-		dbServerGuiMainFrame_.guiConsoleOut(text);
+		if(dbServerGuiMainFrame_ != null) {
+			dbServerGuiMainFrame_.guiConsoleOut(text);
+		} else {
+			System.out.println(text);
+		}
 	}
 }

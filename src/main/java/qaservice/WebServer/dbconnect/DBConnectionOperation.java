@@ -82,14 +82,13 @@ public class DBConnectionOperation {
 	
 	public synchronized void endUsedConnctionNotify(Connection conn) {
 		dbConnectionPool_.put(conn, false);
-		System.out.println(conn);
+		System.out.println("connection checker");
 		dbConnectionPool_.entrySet().forEach(e -> {
 			System.out.println(e.getKey() + "/" + e.getValue());
 		});
 	}
 
 	private static boolean enabledCreateDBConnectionFucntionCalled() {
-		System.out.println(Thread.currentThread().getStackTrace()[3].getClassName());
 		if("qaservice.WebServer.gui.GuiMainFrame".equals(Thread.currentThread().getStackTrace()[3].getClassName()) ||
 			"qaservice.WebServer.main.WebServerStartingOperation".equals(Thread.currentThread().getStackTrace()[3].getClassName())) {
 			return true;

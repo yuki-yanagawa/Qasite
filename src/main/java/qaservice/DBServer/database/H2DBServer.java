@@ -61,15 +61,15 @@ public class H2DBServer implements IDBServer {
 			dbServer_.start();
 			Thread.sleep(2000);
 		} catch(ClassNotFoundException e) {
-			//e.printStackTrace();
+			e.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			throw new DBSettingException(e.getMessage());
 		} catch(SQLException se) {
-			//se.printStackTrace();
+			se.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(se.getMessage());
 			throw new DBSettingException(se.getMessage());
 		} catch(InterruptedException ie) {
-			//ie.printStackTrace();
+			ie.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(ie.getMessage());
 		}
 		
@@ -85,10 +85,10 @@ public class H2DBServer implements IDBServer {
 	
 	private void createNewDB() throws DBSettingException{
 		try {
-			File file = Paths.get(DATABASE_PATH + "/" + DATABASE_NAME).toFile();
+			File file = Paths.get(DATABASE_PATH  + File.separator +  DATABASE_NAME).toFile();
 			file.createNewFile();
 		} catch(IOException e) {
-			//e.printStackTrace();
+			e.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			throw new DBSettingException(e.getMessage());
 		}
@@ -111,14 +111,14 @@ public class H2DBServer implements IDBServer {
 					fileLine = buf.readLine();
 				}
 			} catch(SQLException e) {
-				//e.printStackTrace();
+				e.printStackTrace();
 				DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			}
 		} catch(FileNotFoundException f) {
-			//f.printStackTrace();
+			f.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(f.getMessage());
 		} catch(IOException ie) {
-			//ie.printStackTrace();
+			ie.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(ie.getMessage());
 		}
 	}
