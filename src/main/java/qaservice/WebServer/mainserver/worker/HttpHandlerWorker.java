@@ -4,12 +4,24 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
+import javax.net.ssl.SSLSocket;
+
+import qaservice.Common.socketutil.WrapperSocket;
 import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.mainserver.IServer;
 import qaservice.WebServer.mainserver.taskhandle.http.HttpTaskHandle;
+import qaservice.WebServer.mainserver.taskhandle.http.request.RequestMessage;
+import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpNotPageException;
+import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpRequestHandlingException;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeWebSocket;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResonseStatusLine;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessage;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageCreateHelper;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
+import qaservice.WebServer.webSocket.WebSocketManager;
 
 class HttpHandlerWorker extends Thread {
 	private IServer server_;
@@ -20,7 +32,7 @@ class HttpHandlerWorker extends Thread {
 	private int keepAliveTimeOutmsec_;
 	HttpHandlerWorker(String threadName) {
 		threadName_ = threadName;
-		keepAliveTimeOutmsec_ = Integer.parseInt(ServerPropReader.getProperties(ServerPropKey.KeepAliveTimeOut.getKey()).toString());
+		keepAliveTimeOutmsec_ = Integer.parseInt(ServerPropReader.getProperties(ServerPropKey.KeepAliveTimeOut.getKey()).toString()) * 1000;
 		workStart();
 	}
 	
@@ -57,40 +69,156 @@ class HttpHandlerWorker extends Thread {
 			if(state_ != WorkerStates.EXECUTING) {
 				setStatusExecuting();
 			}
-			try(Socket clientSocket = server_.awaitRequest();){
+			// For Web Socket Connecting Change. Because socket want to connect enable keeping.
+			//try(Socket clientSocket = server_.awaitRequest();){
+			try {
+				Socket clientSocket = server_.awaitRequest();
 				changeLeaderResult = HttpHandlerWorkerOperation.promptLeaderThread();
 				if(changeLeaderResult) {
 					//HttpTaskHandle.httpHandleThread(clientSocket);
-					clientSocket.setKeepAlive(true);
-					clientSocket.setSoTimeout(keepAliveTimeOutmsec_ * 1000);
+					clientSocket.setKeepAlive(false);
+					clientSocket.setSoTimeout(keepAliveTimeOutmsec_);
 					httpRequestHandle(clientSocket);
 				} else {
 					//Handle Full Task Response
+					System.err.println("promptthread failed");
 				}
 			} catch(Throwable e) {
 				//e.printStackTrace();
 				ServerLogger.getInstance().warn(e, "svrSocket accept step failed");
 			}
-			if(changeLeaderResult) {
-				releaseAcceptTask();
-			}
+			releaseAcceptTask();
+//			if(changeLeaderResult) {
+//				releaseAcceptTask();
+//			}
 		}
 	}
 
+	@SuppressWarnings("rawtypes")
 	private void httpRequestHandle(Socket socket) {
-		try(InputStream is = socket.getInputStream();
-			OutputStream os = socket.getOutputStream()) {
-			boolean keepAlive = HttpTaskHandle.httpHandleThread(is, os);
-			while(keepAlive) {
-				keepAlive = HttpTaskHandle.httpHandleThread(is, os);
-				if(!keepAlive) {
-					os.write("".getBytes());
+		boolean isSSL = false;
+		if(socket instanceof SSLSocket) {
+			socket = (SSLSocket)socket;
+			isSSL = true;
+		}
+		boolean isWebSocketConnet = false;
+//		try(InputStream is = socket.getInputStream();
+//			OutputStream os = socket.getOutputStream()) {
+		try(WrapperSocket wrapperSocket = WrapperSocket.createInstance(socket, isSSL)) {
+			InputStream is = wrapperSocket.getInputStream();
+			OutputStream os = wrapperSocket.getOutputStream();
+			RequestMessage requestMessage;
+			try {
+				requestMessage = HttpTaskHandle.analizeRequestMessage(is, os);
+			} catch(HttpRequestHandlingException he) {
+				//HTTP 500
+				os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
+				os.flush();
+				return;
+			}
+			if(requestMessage == null) {
+				System.err.println("analizeRequestMessage failed");
+				return;
+			}
+			boolean isKeepAlive = false;
+			boolean isPeek = HttpHandlerWorkerOperation.isPeekExetuingThread();
+			if(!isPeek) {
+				isKeepAlive = HttpTaskHandle.checkedRequestKeepAlive(requestMessage);
+			}
+			ResponseMessage responseMessage;
+			try {
+				responseMessage = HttpTaskHandle.createResponseMessage(requestMessage);
+			} catch(HttpRequestHandlingException he) {
+				he.printStackTrace();
+				//HTTP 500
+				os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
+				os.flush();
+				return;
+			} catch(HttpNotPageException ne) {
+				ne.printStackTrace();
+				//HTTP 404
+				os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Not_Found, "HTTP/1.1", ne.getMessage()));
+				os.flush();
+				return;
+			}
+			if(responseMessage == null) {
+				System.err.println("createResponse failed");
+				return;
+			}
+			os.write(responseMessage.createResponseMessage(isKeepAlive));
+			os.flush();
+			isWebSocketConnet = responseMessage instanceof ResponseMessageTypeWebSocket ? true : false;
+			if(isWebSocketConnet) {
+				wrapperSocket.setKeepConnect(true);
+			}
+			long keepAliveTimeStart = System.currentTimeMillis();
+			while(isKeepAlive) {
+				if(System.currentTimeMillis() - keepAliveTimeStart >= keepAliveTimeOutmsec_) {
+					break;
+				}
+				RequestMessage requestMessageKeep;
+				try {
+					requestMessageKeep = HttpTaskHandle.analizeRequestMessage(is, os);
+				} catch(HttpRequestHandlingException he) {
+					//HTTP 500
+					os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
+					os.flush();
+					return;
+				}
+				if(requestMessageKeep == null) {
+					//check connected
+					try { 
+						os.write("".getBytes());
+						os.flush();
+					} catch(SocketTimeoutException e) {
+						e.printStackTrace();
+						return;
+					}
+					isPeek = HttpHandlerWorkerOperation.isPeekExetuingThread();
+					if(isPeek) {
+						break;
+					}
+					continue;
+				}
+				isKeepAlive = HttpTaskHandle.checkedRequestKeepAlive(requestMessageKeep);
+				ResponseMessage responseMessageKeepAlive;
+				try {
+					responseMessageKeepAlive = HttpTaskHandle.createResponseMessage(requestMessageKeep);
+				} catch(HttpRequestHandlingException he) {
+					he.printStackTrace();
+					//HTTP 500
+					os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
+					os.flush();
+					return;
+				} catch(HttpNotPageException ne) {
+					ne.printStackTrace();
+					//HTTP 404
+					os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Not_Found, "HTTP/1.1", ne.getMessage()));
+					os.flush();
+					return;
+				}
+				if(responseMessageKeepAlive == null) {
+					System.err.println("createResponse failed");
+					return;
+				}
+				os.write(responseMessageKeepAlive.createResponseMessage(isKeepAlive));
+				os.flush();
+			}
+			if(isWebSocketConnet) {
+				boolean registBool = WebSocketManager.registSocket(wrapperSocket);
+				if(!registBool) {
+					wrapperSocket.setKeepConnect(false);
 				}
 			}
 		} catch(IOException e) {
 			e.printStackTrace();
-		} finally {
-			closeClientSocket(socket);
+//			String[] data = ((SSLSocket)socket).getSupportedCipherSuites();
+//			for(String d : data) {
+//				System.out.println(d);
+//			}
+			
+		} catch(Exception e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -136,6 +264,14 @@ class HttpHandlerWorker extends Thread {
 			clientSocket.close();
 		} catch(IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	private void timeSleep(int mtime) {
+		try {
+			Thread.sleep(mtime);
+		} catch(InterruptedException e) {
+			
 		}
 	}
 }

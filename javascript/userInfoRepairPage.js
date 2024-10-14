@@ -1,13 +1,12 @@
 var FIXED_IMG_WIDTH = 0;
 var FIXED_IMG_HEIGHT = 0;
-var pictureUpdateFlg = false;
-var introductionTextUpdateFlg = false;
+var imgFrameDefaultSize = 200;
 $(function() {
     initializeButton();
     initializeUpdateImage();
     initializeUserImageArea();
     initializeUserInfoArea();
-    settingUserInfoArea();
+	settingUserInfoArea();
     footerPositionSetting();
     // $('#imgCanvas').hide();
     // $('#userImgInput').off('change');
@@ -51,7 +50,6 @@ function userImgUpdate(e) {
                 // console.log("newWidth : " + newWidth);
                 // console.log("width : " + (FIXED_IMG_WIDTH + 20));
             }
-            pictureUpdateFlg = true;
             ctx.drawImage(img, leftPosition + newWidth, topPosition, newWidth, newHeight);
         })
         img.src = fileData.result;
@@ -60,8 +58,14 @@ function userImgUpdate(e) {
 }
 
 function initializeUpdateImage() {
-    $('#userImgInput').off('change');
-    $('#userImgInput').on('change', userImgUpdate);
+    // $('#userImgInput').off('change');
+    // $('#userImgInput').on('change', userImgUpdate);
+    $('#inputUserImageUploadWrap').off('click');
+    $('#inputUserImageUploadWrap').on('click', function(){
+        $('#inputUserImageUpload').click();
+    });
+    $('#inputUserImageUpload').off('change');
+    $('#inputUserImageUpload').on('change', uploadUserImgFile);
 }
 
 function initializeUserImageArea() {
@@ -73,9 +77,9 @@ function initializeUserImageArea() {
 }
 
 function initializeUserInfoArea() {
-    //let labelWidth = $('#userIDArea .input-group-text').outerWidth();
-    //$('#userRankArea .input-group-text').css('width', labelWidth);
-    //$('#userNameArea .input-group-text').css('width', labelWidth);
+    let labelWidth = $('#userIDArea .input-group-text').outerWidth();
+    $('#userRankArea .input-group-text').css('width', labelWidth);
+    $('#userNameArea .input-group-text').css('width', labelWidth);
 }
 
 function footerPositionSetting() {
@@ -117,89 +121,18 @@ function switchBttunClick() {
 
 function updateUserInfo() {
     let userUpdateInfoParam = collectParameter();
-    let hiddenUserName = $('#userNameHidden').val();
-    updateUserName({'username' : userUpdateInfoParam['username'], 'userId' : userUpdateInfoParam['userId']})
-    .done(function(result){
-        if(!result) {
-            return;
-        }
-        $.when(
-            updateUserImage(),
-            updateUserIntroduction({'userId' : userUpdateInfoParam['userId'], 'userIntroduction' : userUpdateInfoParam['introductionText']})
-        )
-        .done(function(){
-            var option = new Object();
-            option.parentId = '#userInfoRepqirPageBody';
-            option.message = 'ユーザー情報を更新致しました。';
-            new Dialog(option);
-        })
-        .fail(function(){
-            var option = new Object();
-            option.parentId = '#userInfoRepqirPageBody';
-            option.message = '一部ユーザー情報の編集に失敗しました。';
-            new Dialog(option);
-        })
-    })
-    .fail(function(data){
-        var option = new Object();
-        option.parentId = '#userInfoRepqirPageBody';
-        option.message = 'ユーザー情報の編集に失敗しました。';
-        new Dialog(option);
-    });
-}
-
-function updateUserName(userUpdateData) {
-    let dfd = $.Deferred();
-    if(userUpdateData['username'] === $('#userNameHidden').val()) {
-        return dfd.resolve(true);
-    }
     $.ajax({
-        type: 'PUT',
-        url: '/updateUserName',
+        type: 'POST',
+        url: '/updateUserInfo',
         contentType : 'application/json',
-        data : userUpdateData
+        data : userUpdateInfoParam
     })
-    .done(function(){
-        return dfd.resolve(true);
-    })
-    .fail(function(){
-        return dfd.reject(false);
-    });
-    return dfd.promise();
-}
-
-function updateUserImage() {
-    let dfd = $.Deferred();
-    if(!pictureUpdateFlg) {
+    .done(function(data){
         return dfd.resolve();
-    }
-    return dfd.promise();
-}
-
-function updateUserIntroduction(userUpdateData) {
-    let dfd = $.Deferred();
-    // if(!introductionTextUpdateFlg) {
-    //     return dfd.resolve();
-    // }
-    $.ajax({
-        type: 'PUT',
-        url: '/updateUserIntroduction',
-        contentType: 'application/json',
-        data: userUpdateData
-    })
-    .done(function(){
-        var option = new Object();
-        option.parentId = '#userInfoRepqirPageBody';
-        option.message = '自己紹介を更新致しました。';
-        new Dialog(option);
     })
     .fail(function(){
-        var option = new Object();
-        option.parentId = '#userInfoRepqirPageBody';
-        option.message = '自己紹介の更新に失敗致しました。';
-        new Dialog(option);
+        return dfd.reject();
     });
-    return dfd.promise();
 }
 
 function collectParameter() {
@@ -207,8 +140,86 @@ function collectParameter() {
         'userId' : $('#userIDArea input').val(),
         'username' : $('#userNameArea input').val(),
         'introductionText' : changeJapaneseToCharacterCode(adjustPreviweTextCreate($('#inputTextArea')[0].innerHTML)),
-        'picture' : $('#imgCanvas').css('display') === 'none' ? "" : $('#imgCanvas').get(0).toDataURL('png/jpeg')
+        //'picture' : $('#imgCanvas').css('display') === 'none' ? "" : $('#imgCanvas').get(0).toDataURL('png/jpeg')
     }; 
+}
+
+
+function uploadUserImgFile(e) {
+    let filename = e.currentTarget.files[0].name;
+    let fileReader = new FileReader();
+    fileReader.onload = (function(e){
+        if($('#appendImgDom').length === 1) {
+            $('#appendImgDom').remove();
+        }
+        $('#userCircleSvg').hide();
+        $('.img-area').append(appendEmptyImgDom(true));
+        $('#appendImgDom').attr('src', e.currentTarget.result);
+        // let index = $('.uploadImageFileListFrame').length;
+        // let clone = $('.uploadImageFileListFrame').eq(0).clone();
+        // let cloneDomId = 'uploadImageFileListFrame' + index;
+        // clone.attr({id : cloneDomId});
+        // $('#uploadedImageFileArea').append(clone);
+        // $('#' + cloneDomId).show();
+        // $('#' + cloneDomId + ' .openValue').val(filename);
+        // $('#' + cloneDomId + ' button').off('click');
+        // $('#' + cloneDomId + ' button').on('click', function(){
+        //     $('#' + cloneDomId).remove();
+        // });
+        // $('#' + cloneDomId + ' .hiddenValue').val(e.currentTarget.result);
+        // $('#inputImageFileForUpload').val('');
+    })
+    fileReader.readAsDataURL(e.currentTarget.files[0]);
+}
+
+function appendEmptyImgDom(onloadFlg) {
+    if(onloadFlg) {
+        return '<div style=\"text-align:center;\"><img id=\"appendImgDom\" onload=\"adjustImg();\"/></div>';
+    }
+    return '<div style=\"text-align:center;\"><img id=\"appendImgDom\"/></div>';
+}
+
+function resizeImgData() {
+    if(imgFrameDefaultSize >= $('#appendImgDom').width() && imgFrameDefaultSize >= $('#appendImgDom').height()) {
+        return;
+    }
+    if($('#appendImgDom').width() > $('appendImgDom').height()) {
+        $('#appendImgDom').width(imgFrameDefaultSize);
+    } else {
+        $('#appendImgDom').height(imgFrameDefaultSize);
+    }
+    return;
+}
+
+function resizeImgDataUpdate() {
+    let dfd = $.Deferred();
+    const canvas = document.createElement('canvas');
+    canvas.width = imgFrameDefaultSize;
+    canvas.height = imgFrameDefaultSize;
+    const ctx = canvas.getContext('2d');
+    var img = new Image();
+    img.onload = (function(){
+        let leftPosition = 0;
+        let topPosition = 0;
+        let width = $('#appendImgDom').width();
+        let height = $('#appendImgDom').height();
+        leftPosition = (imgFrameDefaultSize - width) / 2;
+        topPosition = (imgFrameDefaultSize - height) / 2
+        ctx.drawImage(img, leftPosition, topPosition, $('#appendImgDom').width(), $('#appendImgDom').height());
+        return dfd.resolve(canvas.toDataURL('image/png'));
+    })
+    img.src = $('#appendImgDom').attr('src');
+    return dfd.promise();
+}
+
+function adjustImg() {
+    resizeImgData();
+    resizeImgDataUpdate()
+    .then(function(binReSizeData){
+        $('#appendImgDom').remove();
+        $('.img-area').append(appendEmptyImgDom(false));
+        $('#appendImgDom').attr('src', binReSizeData);
+    })
 }
 
 function settingUserInfoArea() {

@@ -23,11 +23,19 @@ function passSha256() {
 function loginDataSubmit() {
     var requestParam = new Object();
     requestParam['name'] = $('#Username').val().trim();
-    passSha256()
-    .then(function(pass){
-        requestParam['password'] = pass;
+    if(window.isSecureContext) {
+        passSha256()
+        .then(function(pass){
+            requestParam['password'] = pass;
+            requestParam['checked'] = true;
+            submitProcess(requestParam);
+        });
+    } else {
+        requestParam['password'] = window.btoa($('#Password').val().trim());
+        requestParam['checked'] = false;
         submitProcess(requestParam);
-    });
+    }
+    
 }
 
 function submitProcess(param) {

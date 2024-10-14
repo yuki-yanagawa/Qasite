@@ -8,7 +8,7 @@ import qaservice.WebServer.mainserver.ServerOperator;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
-public class ResponseMessageCreator {
+public class ResponseMessageCreateHelper {
 	static final String RESPONSE_LINE_SEPARATOR = "\r\n";
 	static final String END_CODE = "\r\n\r\n";
 	static final String KEEPALIVE_TIME;
@@ -134,5 +134,17 @@ public class ResponseMessageCreator {
 
 	static String createHeaderConnectionClose() {
 		return "Connection: close" + RESPONSE_LINE_SEPARATOR;
+	}
+
+	static String createHeaderWWWAuthenticate() {
+		return "WWW-Authenticate: Basic relm=\"admin page access\", charset=\"UTF-8\"" + RESPONSE_LINE_SEPARATOR;
+	}
+
+	static String createConnectionUpgrade() {
+		return "Connection: Upgrade" + RESPONSE_LINE_SEPARATOR;
+	}
+
+	static String createUpgrade(String upgrade) {
+		return "Upgrade: " + upgrade + RESPONSE_LINE_SEPARATOR;
 	}
 }

@@ -9,7 +9,7 @@
 </head>
 <body onload="onloadDisyPlay();" style="opacity: 0;">
     <nav class="navbar navbar-expand-sm navbar-light bg-light">
-        <a class="navbar-brand" href="/">Q&A SITE</a>
+        <a class="navbar-brand" href="/">(@siteName)</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -19,14 +19,14 @@
                     <a id="dropdownNav" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         カテゴリ
                     </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="#">カテゴリ1</a>
+                    <div id="categoryMenu" class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <!-- <a class="dropdown-item" href="#">カテゴリ1</a>
                         <a class="dropdown-item" href="#">カテゴリ2</a>
-                        <a class="dropdown-item" href="#">カテゴリ3</a>
+                        <a class="dropdown-item" href="#">カテゴリ3</a> -->
                     </div>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">関連サイト</a>
+                    <a class="nav-link" href="/tobaccoRoom" target="_blank">喫煙所</a>
                 </li>
                 <li class="nav-item"></li>
                     <a class="nav-link" id="userInfoLink">ログインする</a>
@@ -106,13 +106,14 @@
     <div class="container-fluid">
         <div class="card-body">
             <p class="mt-5 mb-3 text-muted">
-                &copy; Q&Aサンプルサイト
+                &copy; (@companyName)
             </p>
         </div>
     </div>
     <script src="jquery-3.7.1.min.js"></script>
     <script src="popper.min.js"></script>
     <script src="bootstrap.min.js"></script>
+    <script src="globalDef.js"></script>
     <script src="common.js"></script>
     <script src="main.js"></script>
 </body>

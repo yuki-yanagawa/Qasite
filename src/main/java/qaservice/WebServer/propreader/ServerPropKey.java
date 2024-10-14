@@ -5,6 +5,7 @@ public enum ServerPropKey {
 	ServerHost("serverHost"),
 	ServerDefaultPortSetting("serverPortDefaultSettiing"),
 	ServerName("hostName"),
+	ServerTLS("servertls"),
 	DateFormat("dateTimeFormat"),
 	TimeZone("zoneTime"),
 	LoggingLevel("LoggingLevel"),

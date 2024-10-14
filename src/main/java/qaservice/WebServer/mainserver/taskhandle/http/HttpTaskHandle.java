@@ -12,7 +12,7 @@ import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpNotP
 import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpRequestHandlingException;
 import qaservice.WebServer.mainserver.taskhandle.http.response.ResonseStatusLine;
 import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessage;
-import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageCreator;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageCreateHelper;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
@@ -35,49 +35,43 @@ public class HttpTaskHandle {
 		READ_TIME_OUT = readTimeOut;
 	}
 
-	public static boolean httpHandleThread(InputStream is, OutputStream os) throws IOException{
+	public static RequestMessage analizeRequestMessage(InputStream is, OutputStream os) throws IOException, HttpRequestHandlingException, Exception {
 		byte[] requestDataRaw = readRequestData(is);
 		if(requestDataRaw.length == 0) {
-			return false;
+			return null;
 		}
-		try {
-			RequestMessage requestMessage = RequestMessage.analyzeRequestMesage(requestDataRaw);
-			String contentLength = requestMessage.getRequestHeaderValue(RequsetHeaderType.ContentLength);
-			if(!"".equals(contentLength)) {
-				if(Integer.parseInt(contentLength) > requestDataRaw.length) {
-					byte[] requestDataRawSecond = readRequestData(is);
-					byte[] newRequestDataRaw = new byte[requestDataRaw.length + requestDataRawSecond.length];
-					System.arraycopy(requestDataRaw, 0, newRequestDataRaw, 0, requestDataRaw.length);
-					System.arraycopy(requestDataRawSecond, 0, newRequestDataRaw, requestDataRaw.length, requestDataRawSecond.length);
-					requestMessage = RequestMessage.analyzeRequestMesage(newRequestDataRaw);
-				}
+		RequestMessage requestMessage = RequestMessage.analyzeRequestMesage(requestDataRaw);
+		String contentLength = requestMessage.getRequestHeaderValue(RequsetHeaderType.ContentLength);
+		if(!"".equals(contentLength)) {
+			if(Integer.parseInt(contentLength) > requestDataRaw.length) {
+				byte[] requestDataRawSecond = readRequestData(is);
+				byte[] newRequestDataRaw = new byte[requestDataRaw.length + requestDataRawSecond.length];
+				System.arraycopy(requestDataRaw, 0, newRequestDataRaw, 0, requestDataRaw.length);
+				System.arraycopy(requestDataRawSecond, 0, newRequestDataRaw, requestDataRaw.length, requestDataRawSecond.length);
+				requestMessage = RequestMessage.analyzeRequestMesage(newRequestDataRaw);
 			}
-			// keep-alive check
-			String connectionStyle = requestMessage.getRequestHeaderValue(RequsetHeaderType.Connection);
-			boolean usingKeepAlive = false;
-			if("KEEP-ALIVE".equals(connectionStyle.toUpperCase())) {
-				usingKeepAlive = true;
-			}
-			ResponseMessage responseMessage = HttpRouter.delegateCreateResponseMethod(requestMessage);
-			os.write(responseMessage.createResponseMessage(usingKeepAlive));
-			os.flush();
-			return usingKeepAlive;
-		} catch(HttpRequestHandlingException he) {
-			he.printStackTrace();
-			//HTTP 500
-			os.write(ResponseMessageCreator.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
-			os.flush();
-			return false;
-		} catch(HttpNotPageException ne) {
-			//ne.printStackTrace();
-			//HTTP 404
-			os.write(ResponseMessageCreator.createResponseMessage(ResonseStatusLine.Not_Found, "HTTP/1.1", ne.getMessage()));
-			os.flush();
-			return false;
 		}
+		return requestMessage;
 	}
 
-	private static byte[] readRequestData(InputStream is) throws IOException {
+	public static boolean checkedRequestKeepAlive(RequestMessage requestMessage) {
+		// keep-alive check
+		boolean usingKeepAlive = false;
+		String connectionStyle = requestMessage.getRequestHeaderValue(RequsetHeaderType.Connection);
+		if(connectionStyle == null) {
+			return usingKeepAlive;
+		}
+		if("KEEP-ALIVE".equals(connectionStyle.toUpperCase())) {
+			usingKeepAlive = true;
+		}
+		return usingKeepAlive;
+	}
+
+	public static ResponseMessage createResponseMessage(RequestMessage requestMessage) throws HttpNotPageException, HttpRequestHandlingException {
+		return HttpRouter.delegateCreateResponseMethod(requestMessage);
+	}
+
+	private static byte[] readRequestData(InputStream is) throws IOException, Exception {
 		int readSize = 0;
 		ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
 		long readStartTime = System.currentTimeMillis();

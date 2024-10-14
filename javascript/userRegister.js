@@ -52,6 +52,14 @@ function passwordToHiddenFunction() {
 }
 
 function registerFunction() {
+    if(!checkUserName()) {
+        var option = new Object();
+        option.parentId = '#userRegisterBody';
+        option.message = 'ユーザー名は英数字と「-」、「_」のみ有効になります';
+        new Dialog(option);
+        return;
+    }
+
     if(!checkEmailAddress()) {
         var option = new Object();
         option.parentId = '#userRegisterBody';
@@ -71,7 +79,7 @@ function registerFunction() {
     let mailText = $('#MailAddress').val().trim();
     let inputPassWord = $('#inputPassWord').val().trim();
     let userName = changeJapaneseToCharacterCode($('#Username').val().trim());
-
+    inputPassWord = window.btoa(inputPassWord);
     digestMessageSHA256(inputPassWord)
     .then((digestpassWord) => {
         resisterDataSubmit(mailText, userName, digestpassWord);
@@ -128,6 +136,15 @@ function resisterDataSubmit(mailText, userName, digestpassWord) {
         $('#gobackHomeBt').off('click');
         $('#gobackHomeBt').on('click', gobackHome);
     });
+}
+
+function checkUserName() {
+    let reg = new RegExp(/[^a-zA-Z0-9-_]/g);
+    let inputUserName = $('#Username').val().trim();
+    if(inputUserName.match(reg) == null) {
+        return true;
+    }
+    return false;
 }
 
 function checkEmailAddress() {

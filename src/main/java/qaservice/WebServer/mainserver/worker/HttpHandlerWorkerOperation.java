@@ -46,7 +46,7 @@ public class HttpHandlerWorkerOperation {
 	public static synchronized void decrementRequestCount() {
 		executingCount_--;
 	}
-	
+
 	private static void killHttpHandleWorker(HttpHandlerWorker worker) {
 		switch(worker.getWorkerState()) {
 			case WAITING : {
@@ -85,6 +85,10 @@ public class HttpHandlerWorkerOperation {
 		if(currentIndex_ >= workerList_.size()) {
 			currentIndex_ = 0;
 		}
+		//debug
+//		workerList_.forEach(e -> {
+//			System.out.println(e.getName() + " : " + e.getWorkerState());
+//		});
 		HttpHandlerWorker tmpLeaderThread = workerList_.get(currentIndex_);
 		switch(tmpLeaderThread.getWorkerState()) {
 			case WAITING : {
@@ -106,5 +110,13 @@ public class HttpHandlerWorkerOperation {
 				return;
 			}
 		}
+	}
+
+	static long getExecutingThreadCount() {
+		return workerList_.stream().filter(e -> e.getWorkerState() == WorkerStates.EXECUTING).count();
+	}
+
+	static boolean isPeekExetuingThread() {
+		return getExecutingThreadCount() >= workerList_.size() * 0.6;
 	}
 }

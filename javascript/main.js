@@ -1,6 +1,6 @@
 var objLine = [];
 var cmdLineGlobal = '[user@TestUser]# ';
-var cmdLineAddStr = 'Hello,statistics world!';
+//var cmdLineAddStr = 'Hello,statistics world!';
 var containerHeightDefault; 
 
 $(function(){
@@ -13,6 +13,8 @@ $(function(){
 
    var text = $('#cmdInput').val();
    cmdInputHello(text, cmdLineAddStr, 0);
+
+   createCategoryMenu();
 
    $('#questPostBt').on('click', questPostPageRequest);
 
@@ -77,41 +79,6 @@ function getQuestionAllData(answerPattern) {
       if(data.length === 0) {
          return dfd.resolve();
       }
-      // let copyCardIndex = 1;
-      // let idFrameName = 'cardQuest-';
-      // let linkUriTextFrame = '/getQuestionDetail-';
-      // let parentSelector = $('.container');
-      // let i = 0;
-      // let witdhCard = $('.card.quest .card-body').width();
-      // let fontSize = Number($('.card.quest .card-body a').css('font-size').replace('px', ''));
-      // let limitCharCount = witdhCard/fontSize;
-      // for(i = 0; i < data.length; i++) {
-      //    let copyNode = $('.card.quest').eq(copyCardIndex).clone();
-      //    let idName = idFrameName + String(i + 1);
-      //    copyNode.attr('id', idName);
-      //    parentSelector.append(copyNode);
-      //    let linkUriText = linkUriTextFrame + String(data[i]['questionId']);
-      //    let linkerSelector = $('#' + idName + ' .card-body a');
-      //    //linkerSelector[0].innerHTML = createTitle(changeCharacterCodeToJapanese(data[i]['questionDetailData']), limitCharCount);
-      //    linkerSelector[0].innerHTML = changeCharacterCodeToJapanese(data[i]['questionTitle']);
-      //    linkerSelector.attr('href', linkUriText);
-
-      //    //body title
-      //    let bodyTitleSelector = $('#' + idName + ' .card-body .card-body-genre');
-      //    bodyTitleSelector[0].innerHTML = changeStatisticsType(data[i]['questionType']);
-
-      //    //footer
-      //    let footer =  idName + ' .card-footer';
-      //    let footerQuestDateSelecotr = $('#' + footer + ' #quest-date');
-      //    footerQuestDateSelecotr[0].innerHTML = footerQuestDateSelecotr[0].innerHTML + data[i]['questionUpdateDate'];
-      //    let footerQuestTypeSelecotr = $('#' + footer + ' #questType');
-      //    footerQuestTypeSelecotr[0].innerHTML = footerQuestTypeSelecotr[0].innerHTML + data[i]['questionType'];
-      //    let footerCommentSelecotr = $('#' + footer + ' #commentcount');
-      //    footerCommentSelecotr[0].innerHTML = footerCommentSelecotr[0].innerHTML + data[i]['answerCount'];
-      //    let answerlatestDateSelecotr = $('#' + footer + ' #update-date');
-      //    answerlatestDateSelecotr[0].innerHTML = answerlatestDateSelecotr[0].innerHTML + data[i]['answerUpdateDate'];
-      // }
-      // $('.card.quest').eq(copyCardIndex).hide();
       createQuestionDataArea(data);
       return dfd.resolve();
    })
@@ -365,7 +332,7 @@ function createQuestionDataArea(data) {
    
       //body title
       let bodyTitleSelector = $('#' + idName + ' .card-body .card-body-genre');
-      bodyTitleSelector[0].innerHTML = changeStatisticsType(data[i]['questionType']);
+      bodyTitleSelector[0].innerHTML = changeCategoryType(data[i]['questionType']);
    
       //footer
       let footer =  idName + ' .card-footer';
@@ -379,4 +346,15 @@ function createQuestionDataArea(data) {
       answerlatestDateSelecotr[0].innerHTML = answerlatestDateSelecotr[0].innerHTML + data[i]['answerUpdateDate'];
    }
    $('.card.quest').eq(copyCardIndex).hide();
+}
+
+function createCategoryMenu() {
+   var parentObj = $('#categoryMenu');
+   var length = Object.keys(categoRizeObj).length;
+    var i;
+    for(i = 0; i < length; i++) {
+        var val = categoRizeObj['categoRize' + String(i)];
+        var node = '<a class="dropdown-item" href=\"category-' + String(i + 1) + '\">' + val + '</a>'
+        parentObj.append(node);
+    }
 }

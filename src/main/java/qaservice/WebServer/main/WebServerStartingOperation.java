@@ -3,6 +3,7 @@ package qaservice.WebServer.main;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
 import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.mainserver.ServerOperator;
+import qaservice.WebServer.mainserver.taskhandle.http.FileManager;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
@@ -32,6 +33,10 @@ public class WebServerStartingOperation {
 		}
 		String dbPath = ServerPropReader.getProperties(ServerPropKey.DBServerConnetionPath.getKey()).toString();
 		DBConnectionOperation.getInstance().createConnectionPool(dbPath);
+		
+		//Html File ReWrite
+		FileManager.getInstance();
+
 		timeSleep(1000);
 	}
 

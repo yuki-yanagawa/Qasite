@@ -57,13 +57,7 @@ async function digestMessageSHA256(message) {
     return hashHex;
 }
 
-function changeStatisticsType(num) {
+function changeCategoryType(num) {
     let number = Number(num);
-    if(number === 1) {
-        return 'タイプ1';
-    } else if(number === 2) {
-        return 'タイプ2';
-    } else {
-        return 'タイプ3';
-    }
+    return categoRizeObj['categoRize' + String(number - 1)];
 }

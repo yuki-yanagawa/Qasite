@@ -15,10 +15,19 @@ public class ServerOperator {
 		serverName_ = ServerPropReader.getProperties(ServerPropKey.ServerName.getKey()).toString();
 		WORKER_THREAD_COUNT = Integer.parseInt(ServerPropReader.getProperties(ServerPropKey.ServerWorkerThreadCount.getKey()).toString());
 		HttpHandlerWorkerOperation.createWorkerThreadPool(WORKER_THREAD_COUNT);
+		boolean isTlsMode = Boolean.parseBoolean(ServerPropReader.getProperties(ServerPropKey.ServerTLS.getKey()).toString());
 		try {
-			httpServer_ = new HttpServer(port);
+			if(isTlsMode) {
+				httpServer_ = new HttpsServer(port);
+			} else {
+				httpServer_ = new HttpServer(port);
+			}
 			HttpHandlerWorkerOperation.registerAwaitReciverSocket(httpServer_);
 		} catch(IOException e) {
+			ServerLogger.getInstance().warn("http server setting error..");
+			ServerLogger.getInstance().warn(e.getMessage());
+			return false;
+		} catch(Exception e) {
 			ServerLogger.getInstance().warn("http server setting error..");
 			ServerLogger.getInstance().warn(e.getMessage());
 			return false;

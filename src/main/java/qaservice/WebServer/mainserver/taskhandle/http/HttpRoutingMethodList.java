@@ -2,6 +2,8 @@ package qaservice.WebServer.mainserver.taskhandle.http;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,6 +12,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,6 +34,12 @@ import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpRout
 import qaservice.WebServer.mainserver.taskhandle.http.response.ResonseStatusLine;
 import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseContentType;
 import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessage;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeGetFile;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeJson;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeLeadLocation;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeNoBodyData;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeRequestBasicAuth;
+import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeWebSocket;
 import qaservice.WebServer.mainserver.taskhandle.http.session.SessionOperator;
 
 class HttpRoutingMethodList {
@@ -56,26 +65,12 @@ class HttpRoutingMethodList {
 	
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/")
 	static ResponseMessage indexResponse(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
-		byte[] fileByteData = fileRead("html/index.html");
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/index.html");
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
-
-//	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/*.html")
-//	static ResponseMessage htmlResponse(RequestMessage requestMess) {
-//		String htmlPath = requestMess.getRequestPath();
-//		if(!htmlPath.startsWith("/")) {
-//			htmlPath = "/" + htmlPath;
-//		}
-//		htmlPath = HTMLFILE_FOLDER + htmlPath;
-//		byte[] fileByteData = fileRead(htmlPath);
-//		if(fileByteData == null) {
-//			return null;
-//		}
-//		return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
-//	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/*.js")
 	static ResponseMessage javascriptResponse(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
@@ -84,11 +79,11 @@ class HttpRoutingMethodList {
 			jsPath = "/" + jsPath;
 		}
 		jsPath = JSFILE_FOLDER + jsPath;
-		byte[] fileByteData = fileRead(jsPath);
+		byte[] fileByteData = FileManager.getInstance().fileRead(jsPath);
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, jsPath + "is not Found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.JAVASCRIPT, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.JAVASCRIPT, fileByteData, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/*.css")
@@ -98,29 +93,29 @@ class HttpRoutingMethodList {
 			cssPath = "/" + cssPath;
 		}
 		cssPath = CSSFILE_FOLDER + cssPath;
-		byte[] fileByteData = fileRead(cssPath);
+		byte[] fileByteData = FileManager.getInstance().fileRead(cssPath);
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, cssPath + "is not Found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.CSS, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.CSS, fileByteData, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/questPostPageRequest")
 	static ResponseMessage questPostPageResponse(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
 		String cookie = requestMess.getRequestHeaderValue(RequsetHeaderType.Cookie);
 		if("".equals(cookie)) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), "/login");
+			return new ResponseMessageTypeLeadLocation(requestMess.getHttpProtocol(), "/login");
 		} else {
 			String userName = SessionOperator.getUserDataFromSession(cookie);
 			if(userName == null) {
 				ServerLogger.getInstance().info("sessionid is " + cookie + ". this is not enable");
-				return new ResponseMessage(null, null, requestMess.getHttpProtocol(), "/login");
+				return new ResponseMessageTypeLeadLocation(requestMess.getHttpProtocol(), "/login");
 			}
-			byte[] fileByteData = fileRead("html/requestPostPage.html");
+			byte[] fileByteData = FileManager.getInstance().fileRead("html/requestPostPage.html");
 			if(fileByteData == null) {
 				throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "requestPostPage is not Found.", nowActiveMethod());
 			}
-			return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 		}
 	}
 
@@ -141,7 +136,7 @@ class HttpRoutingMethodList {
 		if(bytes == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "response data create error.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/searchQuestionData")
@@ -162,7 +157,7 @@ class HttpRoutingMethodList {
 		if(bytes == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "response data create error.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/postQuestion")
@@ -174,7 +169,7 @@ class HttpRoutingMethodList {
 			postQuestionResult.put(
 					JsonResponseCommonProtocol.KEY.commonProtocolName, JsonResponseCommonProtocol.VALUE_COOKIE_ISNEED.commonProtocolName);
 			byte[] bytes = createJsonData(postQuestionResult);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		} else {
 			String userName = SessionOperator.getUserDataFromSession(cookie);
 			if(userName == null) {
@@ -183,7 +178,7 @@ class HttpRoutingMethodList {
 				postQuestionResult.put(
 						JsonResponseCommonProtocol.KEY.commonProtocolName, JsonResponseCommonProtocol.VALUE_SESSION_EXPIRER.commonProtocolName);
 				byte[] bytes = createJsonData(postQuestionResult);
-				return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+				return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 			}
 			
 			byte[] titleBytes = requestMess.getRequestBodyDataByKey("title", false);
@@ -206,7 +201,7 @@ class HttpRoutingMethodList {
 			Map<String, String> postQuestionResult = new HashMap<>();
 			postQuestionResult.put(JsonResponseCommonProtocol.KEY.commonProtocolName, String.valueOf(result));
 			byte[] bytes = createJsonData(postQuestionResult);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 	}
 
@@ -216,11 +211,11 @@ class HttpRoutingMethodList {
 		int questionId = getIdFromRequestPath(requestPath, "/postQuestionImgData/([0-9]+)");
 		UserInfo userInfo = getUserInfoFromCookie(requestMess);
 		if(userInfo == null) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean autentiacte = QuestionDataLogic.isPostQuestUser(questionId, userInfo.getUserId());
 		if(!autentiacte) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		byte[] imgData = requestMess.getRequestBodyDataByKey("textImage", false);
 
@@ -228,9 +223,9 @@ class HttpRoutingMethodList {
 		imgData = GZipUtil.compressed(imgData);
 		boolean result = QuestionDataLogic.insertQuestionImgData(imgData, questionId);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -240,11 +235,11 @@ class HttpRoutingMethodList {
 		int questionId = getIdFromRequestPath(requestPath, "/postQuestionLinkData/([0-9]+)");
 		UserInfo userInfo = getUserInfoFromCookie(requestMess);
 		if(userInfo == null) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean autentiacte = QuestionDataLogic.isPostQuestUser(questionId, userInfo.getUserId());
 		if(!autentiacte) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		byte[] filenameBytes = requestMess.getRequestBodyDataByKey("linkFilename", false);
 		byte[] filedataBytes = requestMess.getRequestBodyDataByKey("linkFileData", false);
@@ -256,13 +251,13 @@ class HttpRoutingMethodList {
 			fileId = -1;
 		}
 		if(fileId == -1) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean result = QuestionDataLogic.insertQuestionLinkData(fileId, filenameBytes, filedataBytes, questionId);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -272,17 +267,17 @@ class HttpRoutingMethodList {
 		int questionId = getIdFromRequestPath(requestPath, "/commitQuestion/([0-9]+)");
 		UserInfo userInfo = getUserInfoFromCookie(requestMess);
 		if(userInfo == null) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean autentiacte = QuestionDataLogic.isPostQuestUser(questionId, userInfo.getUserId());
 		if(!autentiacte) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean result = QuestionDataLogic.commitPostQuestion(questionId);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -292,17 +287,17 @@ class HttpRoutingMethodList {
 		int questionId = getIdFromRequestPath(requestPath, "/revertQuestion/([0-9]+)");
 		UserInfo userInfo = getUserInfoFromCookie(requestMess);
 		if(userInfo == null) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean autentiacte = QuestionDataLogic.isPostQuestUser(questionId, userInfo.getUserId());
 		if(!autentiacte) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean result = QuestionDataLogic.revertPostQuestion(questionId);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -335,11 +330,11 @@ class HttpRoutingMethodList {
 //		if(fileByteData == null) {
 //			fileByteData = fileRead("html/questionDetailPage.html");
 //		}
-		byte[] fileByteData = fileRead("html/questionDetailPage.html");
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/questionDetailPage.html");
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "questionDetailPage is not found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
 	
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getQuestionDetail/*")
@@ -366,7 +361,7 @@ class HttpRoutingMethodList {
 		if(enabledGzipCompressed) {
 			bytes = GZipUtil.compressed(bytes);
 		}
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol(), enabledGzipCompressed);
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol(), enabledGzipCompressed);
 	}
 	
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/postAnswer/*")
@@ -388,7 +383,7 @@ class HttpRoutingMethodList {
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName
 					,JsonResponseCommonProtocol.VALUE_SESSION_EXPIRER.commonProtocolName);
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 
 		Map<String, String> retMap = new HashMap<>();
@@ -396,7 +391,7 @@ class HttpRoutingMethodList {
 		int resultAnswerId = AnswerDataLogic.insertAnswer(answerBytes, questionId, userInfo);
 		retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, String.valueOf(resultAnswerId));
 		byte[] bytes = createJsonData(retMap);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/postAnswerImgData/*")
@@ -405,18 +400,18 @@ class HttpRoutingMethodList {
 		int answerId = getIdFromRequestPath(requestPath, "/postAnswerImgData/([0-9]+)");
 		UserInfo userInfo = getUserInfoFromCookie(requestMess);
 		if(userInfo == null) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean autentiacte = AnswerDataLogic.isPostAnswerUser(answerId, userInfo.getUserId());
 		if(!autentiacte) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		byte[] imgData = requestMess.getRequestBodyDataByKey("textImage", false);
 		boolean result = AnswerDataLogic.insertQuestionImgData(imgData, answerId);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -426,11 +421,11 @@ class HttpRoutingMethodList {
 		int answerId = getIdFromRequestPath(requestPath, "/postAnswerLinkData/([0-9]+)");
 		UserInfo userInfo = getUserInfoFromCookie(requestMess);
 		if(userInfo == null) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean autentiacte = AnswerDataLogic.isPostAnswerUser(answerId, userInfo.getUserId());
 		if(!autentiacte) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		byte[] filenameBytes = requestMess.getRequestBodyDataByKey("linkFilename", false);
 		byte[] filedataBytes = requestMess.getRequestBodyDataByKey("linkFileData", false);
@@ -442,14 +437,14 @@ class HttpRoutingMethodList {
 			fileId = -1;
 		}
 		if(fileId == -1) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 
 		boolean result = AnswerDataLogic.insertQuestionLinkData(fileId, filenameBytes, filedataBytes, answerId);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -459,17 +454,17 @@ class HttpRoutingMethodList {
 		int answerId = getIdFromRequestPath(requestPath, "/commitAnswer/([0-9]+)");
 		UserInfo userInfo = getUserInfoFromCookie(requestMess);
 		if(userInfo == null) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean autentiacte = AnswerDataLogic.isPostAnswerUser(answerId, userInfo.getUserId());
 		if(!autentiacte) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean result = AnswerDataLogic.commitPostAnswer(answerId);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -479,17 +474,17 @@ class HttpRoutingMethodList {
 		int questionId = getIdFromRequestPath(requestPath, "/revertAnswer/([0-9]+)");
 		UserInfo userInfo = getUserInfoFromCookie(requestMess);
 		if(userInfo == null) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean autentiacte = AnswerDataLogic.isPostAnswerUser(questionId, userInfo.getUserId());
 		if(!autentiacte) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean result = AnswerDataLogic.revertPostAnswer(questionId);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -518,26 +513,35 @@ class HttpRoutingMethodList {
 		}
 		List<Map<String, Object>> retList = AnswerDataLogic.getAnswerDetailData(questionId, userInfo);
 		byte[] bytes = createJsonData(retList);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 	
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/login")
 	static ResponseMessage login(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
-		byte[] fileByteData = fileRead("html/login.html");
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/login.html");
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "login page is not found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/loginInfo")
 	static ResponseMessage loginInfo(RequestMessage requestMess) {
 		byte[] nameBytes = requestMess.getRequestBodyDataByKey("name");
-		byte[] passwordBytes = requestMess.getRequestBodyDataByKey("password", true);
+		byte[] checkedBytes = requestMess.getRequestBodyDataByKey("checked");
+		boolean checked = Boolean.parseBoolean(new String(checkedBytes, CharUtil.getCharset()));
 		String username = new String(nameBytes, CharUtil.getCharset());
-		String passwordStr = new String(passwordBytes, CharUtil.getCharset());
-		byte[] sha256Bytes = CharUtil.exchangeStrToByte(passwordStr, ",");
-		String password = Base64.getEncoder().encodeToString(sha256Bytes);
+		String password;
+		if(checked) {
+			byte[] passwordBytes = requestMess.getRequestBodyDataByKey("password", true);
+			String passwordStr = new String(passwordBytes, CharUtil.getCharset());
+			byte[] sha256Bytes = CharUtil.exchangeStrToByte(passwordStr, ",");
+			password = Base64.getEncoder().encodeToString(sha256Bytes);
+		} else {
+			byte[] passwordBytes = requestMess.getRequestBodyDataByKey("password", false);
+			password = new String(passwordBytes, CharUtil.getCharset());
+		}
+		
 		//DB search logic
 		boolean loginResult = UserDataLogic.existUserData(username, password);
 		
@@ -546,9 +550,9 @@ class HttpRoutingMethodList {
 		loginResultMap.put("loginResult", loginResult);
 		byte[] bytes = createJsonData(loginResultMap);
 		if(!loginResult) {
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol())
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol())
 				.setSessionRegist(() -> {
 					return SessionOperator.addSessionMap(username);
 				});
@@ -561,7 +565,7 @@ class HttpRoutingMethodList {
 			Map<String, String> retMap = new HashMap<>();
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName ,JsonResponseCommonProtocol.VALUE_DATABASE_UPDATE_FAILED.commonProtocolName);
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 
 		String requestPath = requestMess.getRequestPath();
@@ -587,7 +591,7 @@ class HttpRoutingMethodList {
 		Map<String, String> retMap = new HashMap<>();
 		retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName ,String.valueOf(result));
 		byte[] bytes = createJsonData(retMap);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/actionHelpful/*")
@@ -598,7 +602,7 @@ class HttpRoutingMethodList {
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName,
 					JsonResponseCommonProtocol.VALUE_COOKIE_ISNEED.commonProtocolName);
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 		String username = SessionOperator.getUserDataFromSession(cookie);
 		if(username == null) {
@@ -606,7 +610,7 @@ class HttpRoutingMethodList {
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName
 					,JsonResponseCommonProtocol.VALUE_SESSION_EXPIRER.commonProtocolName);
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 
 		String requestPath = requestMess.getRequestPath();
@@ -643,16 +647,16 @@ class HttpRoutingMethodList {
 		Map<String, String> retMap = new HashMap<>();
 		retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName ,String.valueOf(result));
 		byte[] bytes = createJsonData(retMap);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/newUserRegisterPage")
 	static ResponseMessage newUserRegisterPage(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
-		byte[] fileByteData = fileRead("html/userRegister.html");
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/userRegister.html");
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/userRegister")
@@ -677,14 +681,14 @@ class HttpRoutingMethodList {
 			Map<String, String> retMap = new HashMap<>();
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, "mailExist");
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 		boolean checkUserNameExsist = UserDataLogic.exisitUserName(username);
 		if(checkUserNameExsist) {
 			Map<String, String> retMap = new HashMap<>();
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, "usernameExist");
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 
 		boolean registResult = UserDataLogic.registUser(username, passwordStr, emailText);
@@ -693,13 +697,13 @@ class HttpRoutingMethodList {
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName
 					,JsonResponseCommonProtocol.VALUE_DATABASE_UPDATE_FAILED.commonProtocolName);
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 		Map<String, String> registUserResult = new HashMap<>();
 		registUserResult.put(
 				JsonResponseCommonProtocol.KEY.commonProtocolName, JsonResponseCommonProtocol.VALUE_DATABASE_UPDATE_SUCESS.commonProtocolName);
 		byte[] bytes = createJsonData(registUserResult);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol())
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol())
 				.setSessionRegist(() -> {
 					return SessionOperator.addSessionMap(username);
 				});
@@ -712,21 +716,21 @@ class HttpRoutingMethodList {
 			Map<String, String> retMap = new HashMap<>();
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, "");
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 		String userName = SessionOperator.getUserDataFromSession(cookie);
 		if(userName == null) {
 			Map<String, String> retMap = new HashMap<>();
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, "");
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 		UserInfo userInfo = UserDataLogic.getUserInfoDataByUsername(userName);
 		if(userInfo == null) {
 			Map<String, String> retMap = new HashMap<>();
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, "");
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 		Map<String, Object> retMap = new HashMap<>();
 		Map<String, Object> innerMap = new HashMap<>();
@@ -735,7 +739,7 @@ class HttpRoutingMethodList {
 		innerMap.put("userPicture", userInfo.getUserPicture());
 		retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, innerMap);
 		byte[] bytes = createJsonData(retMap);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/userInfoPage-*")
@@ -756,11 +760,11 @@ class HttpRoutingMethodList {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "user id getting error from requestparameter", nowActiveMethod());
 		}
 
-		byte[] fileByteData = fileRead("html/userInfoPage.html");
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/userInfoPage.html");
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "questionDetailPage is not found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getUserInfo/*")
@@ -785,7 +789,7 @@ class HttpRoutingMethodList {
 			Map<String, String> retMap = new HashMap<>();
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, "");
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 		boolean myInfoPage = false;
 		String cookie = requestMess.getRequestHeaderValue(RequsetHeaderType.Cookie);
@@ -804,7 +808,7 @@ class HttpRoutingMethodList {
 		innerMap.put("myInfoPage", myInfoPage);
 		retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, innerMap);
 		byte[] bytes = createJsonData(retMap);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getUserIntroduction/*")
@@ -819,14 +823,14 @@ class HttpRoutingMethodList {
 			Map<String, String> retMap = new HashMap<>();
 			retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, "");
 			byte[] bytes = createJsonData(retMap);
-			return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		}
 		Map<String, Object> retMap = new HashMap<>();
 		Map<String, Object> innerMap = new HashMap<>();
 		innerMap.put("introduction", userIntroductionData);
 		retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, innerMap);
 		byte[] bytes = createJsonData(retMap);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/userInfoRepairPage")
@@ -851,11 +855,11 @@ class HttpRoutingMethodList {
 		if(userName == null || !userName.equals(userInfo.getUserName())) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "this page is not opened.", nowActiveMethod());
 		}
-		byte[] fileByteData = fileRead("html/userInfoRepairPage.html");
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/userInfoRepairPage.html");
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "userInfoRepairPage is not found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
 
 //	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/updateUserInfo")
@@ -905,12 +909,12 @@ class HttpRoutingMethodList {
 		boolean result = UserDataLogic.updateUserName(updateUserName, userId);
 		if(result) {
 			//Session data UPDATE !!!!!
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content)
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content)
 					.setSessionRegist(() -> {
 						return SessionOperator.addSessionMap(updateUserName);
 					});
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
@@ -924,24 +928,24 @@ class HttpRoutingMethodList {
 		byte[] introductionByte = requestMess.getRequestBodyDataByKey("userIntroduction", false);
 		boolean result = UserDataLogic.updateUserIntroduction(userId, introductionByte);
 		if(result) {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
-			return new ResponseMessage(null, null, requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/inlineAnswerFrame")
 	static ResponseMessage inlineAnswerFramePageResponse(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
-		byte[] fileByteData = fileRead("html/inlineAnswerFrame.html");
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/inlineAnswerFrame.html");
 		if(fileByteData == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
 		}
-		return new ResponseMessage(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/inlineEndDummy")
 	static ResponseMessage inlineEndDummy(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
-		return new ResponseMessage(ResponseContentType.HTML, null, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, null, requestMess.getHttpProtocol());
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getAnswerImgAndLinkData/*")
@@ -955,38 +959,115 @@ class HttpRoutingMethodList {
 		allRetData.putAll(AnswerDataLogic.getAnswerImageData(answerId));
 		allRetData.putAll(AnswerDataLogic.getAnswerLinkFileData(answerId));
 		byte[] bytes = createJsonData(allRetData);
-		return new ResponseMessage(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 	}
 
-	private static byte[] fileRead(String filePath) {
-		byte[] cashedData = getFileDataFromCashe(filePath);
-		if(cashedData != null) {
-			return cashedData;
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/admin")
+	static ResponseMessage adminPage(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		String autorization = requestMess.getRequestHeaderValue(RequsetHeaderType.Authorization);
+		if("".equals(autorization)) {
+			return new ResponseMessageTypeRequestBasicAuth(requestMess.getHttpProtocol());
 		}
+		int index = autorization.toUpperCase().indexOf("BASIC");
+		if(index < 0) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Bad_Request, null, "basic relm failed", nowActiveMethod());
+		}
+		String base64Format = autorization.substring(index + 5).trim();
+		byte[] tmp = Base64.getDecoder().decode(base64Format);
+		String strFormat = new String(tmp, CharUtil.getCharset());
+		String userName = strFormat.split(":")[0].trim();
+		String passWord = strFormat.split(":")[1].trim();
+		boolean adminFlg = false;
+		if("qasiteAdmin".equals(userName) && "qasiteAdmin".equals(passWord)) {
+			adminFlg = true;
+		}
+		if(!adminFlg) {
+			return new ResponseMessageTypeRequestBasicAuth(requestMess.getHttpProtocol());
+		}
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/adminpage.html");
+		if(fileByteData == null) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
+		}
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+	}
 
-		Path path = Paths.get(filePath);
-		if(!Files.exists(path)) {
-			return null;
-		}
-		try(FileInputStream fis = new FileInputStream(path.toFile())){
-			long size = Files.size(path);
-			byte[] fileByteData = new byte[(int)size];
-			fis.read(fileByteData);
-			setCashReqdingFileData(filePath, fileByteData);
-			return fileByteData;
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getAdminSettingFiled")
+	static ResponseMessage getAdminSettingFiled(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		Path path = Paths.get("conf/app.properties");
+		Properties prop = new Properties();
+		try(FileInputStream fis = new FileInputStream(path.toFile());
+			InputStreamReader isr = new InputStreamReader(fis)) {
+			prop.load(isr);
 		} catch(IOException e) {
-			return null;
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "properties file read error", nowActiveMethod());
+		}
+		Map<String, String> propertiesMap = new HashMap<>();
+		prop.keySet().forEach(e -> {
+			propertiesMap.put(String.valueOf(e), String.valueOf(prop.get(e)));
+		});
+		byte[] bytes = createJsonData(propertiesMap);
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.PUT, uri="/updateFieldData")
+	static ResponseMessage updateFieldData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		String autorization = requestMess.getRequestHeaderValue(RequsetHeaderType.Authorization);
+		if("".equals(autorization)) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Bad_Request, null, "basic relm failed", nowActiveMethod());
+		}
+		int index = autorization.toUpperCase().indexOf("BASIC");
+		if(index < 0) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Bad_Request, null, "basic relm failed", nowActiveMethod());
+		}
+		String base64Format = autorization.substring(index + 5).trim();
+		byte[] tmp = Base64.getDecoder().decode(base64Format);
+		String strFormat = new String(tmp, CharUtil.getCharset());
+		String userName = strFormat.split(":")[0].trim();
+		String passWord = strFormat.split(":")[1].trim();
+		boolean adminFlg = false;
+		if("qasiteAdmin".equals(userName) && "qasiteAdmin".equals(passWord)) {
+			adminFlg = true;
+		}
+		if(!adminFlg) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Bad_Request, null, "basic relm failed", nowActiveMethod());
+		}
+		byte[] companyNameByte = requestMess.getRequestBodyDataByKey("companyName");
+		FileManager.getInstance().updateProperties("companyName", new String(companyNameByte, CharUtil.getCharset()));
+		boolean result = FileManager.getInstance().overwritePropertiesFile();
+		if(result) {
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+		} else {
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 	}
 
-	static void setCashReqdingFileData(String filePath, byte[] readData) {
-		fileReadCashe_.put(filePath, readData);
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/upgradeWebSocketConneting")
+	static ResponseMessage upgradeWebSocketConneting(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+//		UserInfo userInfo = getUserInfoFromCookie(requestMess);
+//		if(userInfo == null) {
+//			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Bad_Request, null, "websocket is need login", nowActiveMethod());
+//		}
+		boolean isWebSocket = checkWebSocketConnectRequest(requestMess);
+		String webSocketKey = requestMess.getRequestHeaderValue(RequsetHeaderType.SecWebSocketKey);
+		if(webSocketKey == null) {
+			isWebSocket = false;
+		}
+		if(!isWebSocket) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Bad_Request, null, "websocket parameter is not correct", nowActiveMethod());
+		}
+		
+		return new ResponseMessageTypeWebSocket(webSocketKey, requestMess.getHttpProtocol());
 	}
-	
-	static byte[] getFileDataFromCashe(String key) {
-		return fileReadCashe_.get(key);
+
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/tobaccoRoom")
+	static ResponseMessage tobaccoRoom(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/tabaccoRoom.html");
+		if(fileByteData == null) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
+		}
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
-	
+
 	private static byte[] createJsonData(Object obj) {
 		ObjectMapper mapper = new ObjectMapper();
 		byte[] bytes = null;
@@ -1070,5 +1151,17 @@ class HttpRoutingMethodList {
 			}
 		}
 		return false;
+	}
+
+	private static boolean checkWebSocketConnectRequest(RequestMessage requestMess) {
+		String connection = requestMess.getRequestHeaderValue(RequsetHeaderType.Connection);
+		if(connection == null || !"UPGRADE".equals(connection.toUpperCase())) {
+			return false;
+		}
+		String upgrade = requestMess.getRequestHeaderValue(RequsetHeaderType.Upgrade);
+		if(upgrade == null || !"WEBSOCKET".equals(upgrade.toUpperCase())) {
+			return false;
+		}
+		return true;
 	}
 }

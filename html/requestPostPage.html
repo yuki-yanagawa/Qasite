@@ -9,7 +9,7 @@
 </head>
 <body id="requestPostBody" onload="onloadDisyPlay();" style="opacity: 0;">
     <nav class="navbar navbar-expand-sm navbar-light bg-light">
-        <a class="navbar-brand" href="/">Q&A SITE</a>
+        <a class="navbar-brand" href="/">(@siteName)</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -30,9 +30,9 @@
                         <span class="input-group-text">質問のタイプ</span>
                     </div>
                     <select class="custom-select" id="inputGroupSelect01" aria-label="Example select with button addon">
-                      <option value="1" selected>カテゴリ1</option>
+                      <!-- <option value="1" selected>カテゴリ1</option>
                       <option value="2">カテゴリ2</option>
-                      <option value="99">カテゴリ3</option>
+                      <option value="99">カテゴリ3</option> -->
                     </select>
                 </div>
                 <div class="input-group">
@@ -101,13 +101,14 @@
     <div class="container-fluid">
         <div class="card-body">
             <p class="mt-5 mb-3 text-muted">
-                &copy; Q&Aサンプルサイト
+                &copy; (@companyName)
             </p>
         </div>
     </div>
     <script src="jquery-3.7.1.min.js"></script>
     <script src="popper.min.js"></script>
     <script src="bootstrap.min.js"></script>
+    <script src="globalDef.js"></script>
     <script src="common.js"></script>
     <script src="daialog.js"></script>
     <script src="requestPostPage.js"></script>

@@ -8,6 +8,7 @@ $(function() {
     let tileTextWidth = $('.form-control').eq(0).width();
     $('#titleText').css('width', tileTextWidth);
     $('.input-group').eq(1).css('margin-top', '5px');
+    createSelector();
     initButtonEvent();
     initPreviewButtonEvent();
     initFileUploadEvent();
@@ -535,4 +536,20 @@ function uploadImageFileData(e) {
         $('#inputImageFileForUpload').val('');
     })
     fileReader.readAsDataURL(e.currentTarget.files[0]);
+}
+
+function createSelector() {
+    var parentObj = $('#inputGroupSelect01');
+    var length = Object.keys(categoRizeObj).length;
+    var i;
+    for(i = 0; i < length; i++) {
+        var val = categoRizeObj['categoRize' + String(i)];
+        var node;
+        if(i == 0) {
+            node = '<option value=\"1\" selected>' + val + '</option>'
+        } else {
+            node = '<option value=\"' + String(i + 1) + '\">' + val + '</option>'
+        }
+        parentObj.append(node);
+    }
 }

@@ -16,8 +16,8 @@ import java.util.Set;
 import org.h2.command.query.AllColumnsForPlan;
 
 import qaservice.Common.charcterutil.CharUtil;
+import qaservice.Common.charcterutil.messageDigest.MessageDigestTypeSHA256;
 import qaservice.Common.utiltool.GZipUtil;
-import qaservice.WebServer.cryptography.MessageDigestTypeSHA256;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
 import qaservice.WebServer.logger.ServerLogger;
 

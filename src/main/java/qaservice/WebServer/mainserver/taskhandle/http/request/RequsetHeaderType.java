@@ -7,6 +7,9 @@ public enum RequsetHeaderType {
 	ContentLength("CONTENT-LENGTH"),
 	ContentType("CONTENT-TYPE"),
 	AcceptEncoding("ACCEPT-ENCODING"),
+	Authorization("AUTHORIZATION"),
+	Upgrade("UPGRADE"),
+	SecWebSocketKey("SEC-WEBSOCKET-KEY"),
 	Connection("CONNECTION");
 	
 	private String name_;

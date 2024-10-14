@@ -8,6 +8,7 @@ public enum ResonseStatusLine {
 	See_Other(303),
 	Bad_Request(400),
 	Unauthorized(401),
+	Authorization_Required(401),
 	Not_Found(404),
 	Conflict(409),
 	Internal_Server_Error(500);

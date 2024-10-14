@@ -7,6 +7,7 @@ import java.io.PrintStream;
 import java.nio.file.Paths;
 
 import qaservice.WebServer.gui.GuiMainFrame;
+import qaservice.WebServer.mainserver.taskhandle.http.FileManager;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
@@ -23,6 +24,8 @@ public class WebServerGuiEntryPoin {
 			//Common util read
 			Class.forName("qaservice.Common.charcterutil.CharUtil");
 			Class.forName("qaservice.Common.dateutil.ServerDateUtil");
+			//Html File ReWrite
+			FileManager.getInstance();
 		} catch(ClassNotFoundException e) {
 			e.printStackTrace();
 			return;
