@@ -25,9 +25,18 @@
                         <a class="dropdown-item" href="#">カテゴリ3</a> -->
                     </div>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/tobaccoRoom" target="_blank">喫煙所</a>
+                <li class="nav-item dropdown">
+                    <a id="dropdownNav" class="nav-link dropdown-toggle" href="#" id="navbarDropdown2" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        関連サイト
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdown2">
+                        <a class="dropdown-item" href="/mailtestpage">メールテスト</a>
+                        <a class="dropdown-item" href="/imgtestpage">画像テスト</a>
+                    </div>
                 </li>
+                <!-- <li class="nav-item">
+                    <a class="nav-link" href="/tobaccoRoom" target="_blank">喫煙所</a>
+                </li> -->
                 <li class="nav-item"></li>
                     <a class="nav-link" id="userInfoLink">ログインする</a>
                     <div id="userInfoArea" style="display: none;">
@@ -39,7 +48,7 @@
             <div class="row w-75 justify-content-end">
                 <div class="col-md-9">
                     <div class="input-group">
-                        <input id="searchText" type="text" class="form-control" placeholder="Search" aria-label="Search" aria-describedby="addon-wrapping">
+                        <input id="searchText" type="text" class="form-control" placeholder="検索する" aria-label="Search" aria-describedby="addon-wrapping">
                         <div class="input-group-prepend">
                             <span class="input-group-text" id="addon-wrapping">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">

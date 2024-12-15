@@ -1,3 +1,5 @@
+//Jquery ajax charcter code is UTF-8!!!!
+
 var objLine = [];
 var cmdLineGlobal = '[user@TestUser]# ';
 //var cmdLineAddStr = 'Hello,statistics world!';

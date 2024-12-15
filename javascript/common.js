@@ -1,9 +1,22 @@
+const encoder = new TextEncoder("utf-8");
+
+// function changeJapaneseToCharacterCode(japanese) {
+//     return window.btoa(window.encodeURI(japanese));
+// }
 function changeJapaneseToCharacterCode(japanese) {
-    return window.btoa(window.encodeURI(japanese));
+    return window.encodeURI(japanese);
 }
 
+// function changeCharacterCodeToJapanese(charctercode) {
+//     return window.decodeURI(window.atob(charctercode));
+// }
+
 function changeCharacterCodeToJapanese(charctercode) {
-    return window.decodeURI(window.atob(charctercode));
+    return window.decodeURI(charctercode);
+}
+
+function changeUserNameToBase64(userName) {
+    return window.btoa(userName);
 }
 
 function adjustPreviweTextCreate(inputText) {
@@ -47,6 +60,7 @@ function adjustPreviweTextCreate(inputText) {
 
 
 async function digestMessageSHA256(message) {
+    debugger
     if(!window.isSecureContext || crypto.subtle === undefined) {
         return message;
     }
@@ -60,4 +74,15 @@ async function digestMessageSHA256(message) {
 function changeCategoryType(num) {
     let number = Number(num);
     return categoRizeObj['categoRize' + String(number - 1)];
+}
+
+function passSha256Create(message) {
+    let dfd = $.Deferred();
+    let uintB64 = encoder.encode(message);
+    crypto.subtle.digest('SHA-256', uintB64)
+    .then(function(cryptoData){
+        let retData = window.btoa(new Int8Array(cryptoData));
+        return dfd.resolve(retData);
+    });
+    return dfd.promise();
 }

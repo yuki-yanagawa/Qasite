@@ -1,7 +1,7 @@
 //encoder encode method is return Uint8
 //Base64 do not think about Unsign Or sign
 //Because post request 2STEP IS NEED
-const encoder = new TextEncoder("utf-8");
+// const encoder = new TextEncoder("utf-8");
 
 $(function(){
     $('#loginSubmitBt').on('click', loginDataSubmit);
@@ -22,9 +22,9 @@ function passSha256() {
 
 function loginDataSubmit() {
     var requestParam = new Object();
-    requestParam['name'] = $('#Username').val().trim();
+    requestParam['name'] = changeUserNameToBase64($('#Username').val().trim());
     if(window.isSecureContext) {
-        passSha256()
+        passSha256Create($('#Password').val().trim())
         .then(function(pass){
             requestParam['password'] = pass;
             requestParam['checked'] = true;

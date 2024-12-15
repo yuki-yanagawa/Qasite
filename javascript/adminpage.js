@@ -41,7 +41,7 @@ function collectFieldData() {
         if(value === '') {
             continue;
         }
-        param[id] = value;
+        param[id] = window.encodeURI(value);
     }
     return param;
 }
@@ -57,7 +57,7 @@ function getSettingField() {
         Object.keys(result).sort().forEach(e => {
             var id = 'settingField-' + String(e);
             var node = '<div><label for=\"' + id + '\">' + String(e) + '</label>' +
-                '<input id=\"'+ id + '\" type=\"input\" value=\"' + result[e] + '\"></div>';
+                '<input id=\"'+ id + '\" type=\"input\" value=\"' + window.decodeURI(result[e]) + '\"></div>';
             parentObj.append(node);
         });
     })

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="lightbox.css">
     <link rel="stylesheet" href="requestPost.css">
 </head>
 <body id="requestPostBody" onload="onloadDisyPlay();" style="opacity: 0;">
@@ -45,7 +46,7 @@
                     <input class="form-control" id="inputTitleArea" type="text" placeholder="title" style="display: none;"/>
                 </div>
                 <textarea class="form-control" id="inputTextArea"></textarea>
-                <div class="form-control" id="inputPreview" contenteditable="false" style="display: none;"></div>
+                <div class="form-control" id="inputPreview" contenteditable="false" style="display: none; overflow: auto;"></div>
             </div>
             <div id="imgLinkArea">
                 <button type="button" class="btn btn-link mb-2" id="inputImageFileForUploadWrap">
@@ -98,6 +99,16 @@
             </div>
         </form>
     </div>
+    <div class="block">
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+            <div>
+                <span>Loading...</span>
+            </div>
+        </div>
+    </div>
     <div class="container-fluid">
         <div class="card-body">
             <p class="mt-5 mb-3 text-muted">
@@ -111,6 +122,7 @@
     <script src="globalDef.js"></script>
     <script src="common.js"></script>
     <script src="daialog.js"></script>
+    <script src="lightbox.js"></script>
     <script src="requestPostPage.js"></script>
 </body>
 </html>

@@ -6,9 +6,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -17,9 +20,26 @@ import java.util.Properties;
 import qaservice.Common.charcterutil.CharUtil;
 
 public class FileManager {
+	private static class FileCasheHolder {
+		private byte[] fileData;
+		private FileTime fileTime;
+		FileCasheHolder(byte[] fileData, FileTime fileTime) {
+			this.fileData = fileData;
+			this.fileTime = fileTime;
+		}
+		
+		byte[] getFileData() {
+			return fileData;
+		}
+		
+		FileTime getFileTime() {
+			return fileTime;
+		}
+	}
+
 	private static final String SETTING_PROPERTIES = "conf/app.properties";
 	private static final String GLOBAL_VALIABLE_JS = "javascript/globalDef.js";
-	private static Map<String, byte[]> fileReadCashe_ = new HashMap<>();
+	private static Map<String, FileCasheHolder> fileReadCashe_ = new HashMap<>();
 	private static Properties prop_;
 	private static FileManager fileReadManager_ = new FileManager();
 
@@ -108,29 +128,46 @@ public class FileManager {
 
 	private byte[] replaceFileByteData(byte[] fileData) {
 		String tmp = new String(fileData, CharUtil.getCharset());
-		String replaceStr = tmp.replaceAll("\\(@companyName\\)", prop_.getProperty("companyName"));
-		replaceStr = replaceStr.replaceAll("\\(@siteName\\)", prop_.getProperty("siteName"));
+		String companyNameURLDecode = "QASite";
+		String siteNameURLDecode = "SiteName";
+		try {
+			companyNameURLDecode = URLDecoder.decode((String)prop_.getProperty("companyName"), CharUtil.getCharset().toString());
+			siteNameURLDecode = URLDecoder.decode((String)prop_.getProperty("siteName"), CharUtil.getCharset().toString());
+		}catch(UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		String replaceStr = tmp.replaceAll("\\(@companyName\\)", companyNameURLDecode);
+		replaceStr = replaceStr.replaceAll("\\(@siteName\\)", siteNameURLDecode);
 		return replaceStr.getBytes(CharUtil.getCharset());
 	}
 
 	private void setCashReqdingFileData(String filePath, byte[] readData) {
-		fileReadCashe_.put(filePath, readData);
+		try {
+			FileTime fileTime = Files.getLastModifiedTime(Paths.get(filePath));
+			fileReadCashe_.put(filePath, new FileCasheHolder(readData, fileTime));
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	byte[] fileRead(String filePath) {
+		Path path = Paths.get(filePath);
+		if(!Files.exists(path)) {
+			return null;
+		}
+
 		byte[] cashedData = getFileDataFromCashe(filePath);
 		if(cashedData != null) {
 			return cashedData;
 		}
 
-		Path path = Paths.get(filePath);
-		if(!Files.exists(path)) {
-			return null;
-		}
 		try(FileInputStream fis = new FileInputStream(path.toFile())){
 			long size = Files.size(path);
 			byte[] fileByteData = new byte[(int)size];
 			fis.read(fileByteData);
+			if(path.toString().endsWith("html")) {
+				fileByteData = replaceFileByteData(fileByteData);
+			}
 			setCashReqdingFileData(filePath, fileByteData);
 			return fileByteData;
 		} catch(IOException e) {
@@ -139,7 +176,18 @@ public class FileManager {
 	}
 
 	private byte[] getFileDataFromCashe(String key) {
-		return fileReadCashe_.get(key);
+		FileCasheHolder fileCasheHolder = fileReadCashe_.get(key);
+		if(fileCasheHolder == null) {
+			return null;
+		}
+		try {
+			if(fileCasheHolder.getFileTime().compareTo(Files.getLastModifiedTime(Paths.get(key))) >= 0) {
+				return fileCasheHolder.getFileData();
+			}
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	private void writeGolbalDefnitionJs() {
@@ -158,10 +206,10 @@ public class FileManager {
 					continue;
 				}
 				if(key.matches("^categoRize.*")) {
-					osw.write("categoRizeObj[\'" + entry.getKey() + "\'] = \'" + entry.getValue() + "\';" + separator);
+					osw.write("categoRizeObj[\'" + entry.getKey() + "\'] = window.decodeURI(\'" + entry.getValue() + "\');" + separator);
 				}
 				if("cmdLineAddStr".equals(key)) {
-					osw.write("var cmdLineAddStr = \'" + entry.getValue() + "\';" + separator);
+					osw.write("var cmdLineAddStr = window.decodeURI(\'" + entry.getValue() + "\');" + separator);
 				}
 			}
 			osw.flush();

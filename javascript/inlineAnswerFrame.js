@@ -1,6 +1,7 @@
 var imgFrameDefaultSize = 200;
 var parentQuestionId = -1;
 $(function(){
+    $('.block').hide();
     let bodyHeight = $(document).height() * 0.95;
     $('body').height(bodyHeight)
     $('#inputPreview').hide();
@@ -107,7 +108,7 @@ function previewToInputFormAdjust() {
 }
 
 function previewButtonClick() {
-    console.log(parentQuestionId);
+    // console.log(parentQuestionId);
     let inputText = $('#inputTextArea').val();
     if(inputText.trim() === '') {
         var option = new Object();
@@ -120,9 +121,17 @@ function previewButtonClick() {
     $('#inputPreview')[0].innerHTML = createPreviewText(inputText);
     let noImageFlg = $('#uploadedImageFileArea .hiddenValue').eq(1).length === 0;
     if(!noImageFlg) {
-        $('#inputPreview').append(appendEmptyImgDom(true));
+        loadingfunctionInnerAnswerStart();
+        $('#inputPreview').append(appendEmptyImgDom());
         let binData = $('#uploadedImageFileArea .hiddenValue').eq(1).val();
-        $('#appendImgDom').attr('src', binData);
+        $('#appendImgDomWrap a').prop('href', binData);
+        requestResizeImgData(binData)
+        .then(function(resizeBindata){
+            if(resizeBindata !== undefined) {
+                $('#appendImgDom').attr('src', resizeBindata);
+            }
+            loadingfunctionInnerAnswerEnd();
+        });
     }
 
     //Link file
@@ -212,6 +221,13 @@ function uploadFileData(e) {
     let fileReader = new FileReader();
     fileReader.onload = (function(e){
         //$('#uploadedFileArea').append('<a href=' + e.currentTarget.result + ' download>' + filename + '</a>')
+        let checkSize = $('.uploadFileListFrame').length;
+        if(checkSize >= 2) {
+            let i = 0;
+            for(i = 1; i < checkSize; i++) {
+                $('.uploadFileListFrame').eq(i).remove();
+            }
+        }
         let index = $('.uploadFileListFrame').length;
         let clone = $('.uploadFileListFrame').eq(0).clone();
         let cloneDomId = 'uploadFileIndex' + index;
@@ -229,11 +245,16 @@ function uploadFileData(e) {
     fileReader.readAsDataURL(e.currentTarget.files[0]);
 }
 
-function appendEmptyImgDom(onloadFlg) {
-    if(onloadFlg) {
-        return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\" onload=\"adjustImg();\"/></div>';
-    }
-    return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\"/></div>';
+// function appendEmptyImgDom(onloadFlg) {
+//     if(onloadFlg) {
+//         return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\" onload=\"adjustImg();\"/></div>';
+//     }
+//     return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\"/></div>';
+// }
+
+function appendEmptyImgDom() {
+    //return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\"/></div>';
+    return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><a id=\"imgRawDataRequest\" data-lightbox=\"image-1\"><img id=\"appendImgDom\"/></a></div>';
 }
 
 function adjustImg() {
@@ -283,8 +304,10 @@ function submitFunction() {
     var option = new Object();
     option.parentId = '#inlineAnswerFrameBody';
     option.message = '回答しますか？';
-    option.originalButton = '<button id=\'postDataFuncId\' class=\'btn btn-primary\'>回答する</button>' +
-    ' &nbsp;<button id=\'revertDataFuncId\' class=\'btn btn-primary\'>取り戻す</button>';
+    // option.originalButton = '<button id=\'postDataFuncId\' class=\'btn btn-primary\'>回答する</button>' +
+    // ' &nbsp;<button id=\'revertDataFuncId\' class=\'btn btn-primary\'>取り戻す</button>';
+    option.originalButton = '<button id=\'revertDataFuncId\' class=\'btn btn-secondary\'>取り戻す</button>' +
+    ' &nbsp;<button id=\'postDataFuncId\' class=\'btn btn-primary\'>回答する</button>';
     var dialog = new Dialog(option);
     $('#postDataFuncId').off('click');
     $('#revertDataFuncId').off('click');
@@ -300,59 +323,126 @@ function submitFunction() {
 }
 
 function submitFormData() {
-    debugger
-    let textImgBinData = $('#inputPreview img').attr('src');
-    $('#inputPreview img').remove();
+    loadingfunctionInnerAnswerStart();
+    let binData = $('#uploadedImageFileArea .hiddenValue').eq(1).val();
+    var tmp = $('#inputPreview').clone(true);
+    tmp.find('#appendImgDom').remove();
+    tmp.find('#imgRawDataRequest').removeAttr('href');
+    let inputText = tmp[0].innerHTML;
 
-    let inputText = $('#inputPreview')[0].innerHTML;
-
-    submitTextData(inputText)
-    .then(function(result){
-        if(Number(result) === -1) {
-            var option = new Object();
-            option.parentId = '#inlineAnswerFrameBody';
-            option.message = '回答に失敗しました';
-            option.originalButton = '<button id=\'revertCloesd\' class=\'btn btn-primary\'>閉じる</button>';
-            var dialog = new Dialog(option);
-            $('#revertCloesd').off('click');
-            $('#revertCloesd').on('click', function() {
-                revertFunction();
-                dialog.closeFunc();
-            });
-            return;
-        } else if(result === 'sessionIdExpired') {
-            var option = new Object();
-            option.parentId = '#inlineAnswerFrameBody';
-            option.message = 'ログイン後に回答お願いします。';
-            option.originalButton = '<button id=\'revertCloesd\' class=\'btn btn-primary\'>閉じる</button>';
-            var dialog = new Dialog(option);
-            $('#revertCloesd').off('click');
-            $('#revertCloesd').on('click', function() {
-                revertFunction();
-                dialog.closeFunc();
-            });
+    requestAnswerId()
+    .then(function(data){
+        debugger
+        if(isNaN(data['userId']) || Number(data['userId']) === -1) {
+            persuadeLoginDialog();
             return;
         }
-        let answerId = result;
-        submitTextImgData(answerId, textImgBinData)
-        .then(function(answerId){
-            if(Number(answerId) === -1) {
-                revertSubmitData(answerId);
-                return;
+        if(isNaN(data['answerId']) || Number(data['answerId']) === -1) {
+            postAnswerFailedDailog();
+            return;
+        }
+        $.when(
+            submitAnswerTextData(data['answerId'], data['userId'], inputText),
+            submitTextImgData(data['answerId'], binData),
+            submitLinkData(data['answerId'])
+        )
+        .then(function(resultText, resultImg, resultLinkData){
+            loadingfunctionInnerAnswerEnd();
+            if(resultText && resultImg && resultLinkData) {
+                commitSubmitData(data['answerId']);
+            } else {
+                revertSubmitData(data['answerId']);
             }
-            submitLinkData(answerId)
-            .then(function(answerId){
-                if(Number(answerId) > 0) {
-                    commitSubmitData(answerId);
-                    return;
-                } else {
-                    revertSubmitData(answerId);
-                    return;
-                }
-            });
-        })
-    });
+        });
+    })
+
+    // submitTextData(inputText)
+    // .then(function(result){
+    //     if(Number(result) === -1) {
+    //         var option = new Object();
+    //         option.parentId = '#inlineAnswerFrameBody';
+    //         option.message = '回答に失敗しました';
+    //         option.originalButton = '<button id=\'revertCloesd\' class=\'btn btn-primary\'>閉じる</button>';
+    //         var dialog = new Dialog(option);
+    //         $('#revertCloesd').off('click');
+    //         $('#revertCloesd').on('click', function() {
+    //             revertFunction();
+    //             dialog.closeFunc();
+    //         });
+    //         return;
+    //     } else if(result === 'sessionIdExpired') {
+    //         var option = new Object();
+    //         option.parentId = '#inlineAnswerFrameBody';
+    //         option.message = 'ログイン後に回答お願いします。';
+    //         option.originalButton = '<button id=\'revertCloesd\' class=\'btn btn-primary\'>閉じる</button>';
+    //         var dialog = new Dialog(option);
+    //         $('#revertCloesd').off('click');
+    //         $('#revertCloesd').on('click', function() {
+    //             revertFunction();
+    //             dialog.closeFunc();
+    //         });
+    //         return;
+    //     }
+    //     let answerId = result;
+    //     submitTextImgData(answerId, textImgBinData)
+    //     .then(function(answerId){
+    //         if(Number(answerId) === -1) {
+    //             revertSubmitData(answerId);
+    //             return;
+    //         }
+    //         submitLinkData(answerId)
+    //         .then(function(answerId){
+    //             if(Number(answerId) > 0) {
+    //                 commitSubmitData(answerId);
+    //                 return;
+    //             } else {
+    //                 revertSubmitData(answerId);
+    //                 return;
+    //             }
+    //         });
+    //     })
+    // });
 }
+
+function requestAnswerId() {
+    let dfd = $.Deferred();
+    $.ajax({
+        type: 'POST',
+        url: '/requestAnswerId',
+        contentType : 'application/json',
+        dataType : 'json'
+    })
+    .done(function(data){
+        return dfd.resolve(data);
+    })
+    .fail(function(){
+        return dfd.resolve(-1);
+    });
+    return dfd.promise();
+}
+
+function submitAnswerTextData(answerId, userId, inputText) {
+    let dfd = $.Deferred();
+    let requestObj = new Object;
+    requestObj['text'] = changeJapaneseToCharacterCode(inputText);
+    requestObj['userId'] = userId;
+    requestObj['questionId'] = parentQuestionId;
+    $.ajax({
+        type: 'POST',
+        url: '/postAnswerTextData/' + String(answerId),
+        data: requestObj,
+        contentType : 'application/json',
+        dataType : 'json'
+    })
+    .done(function(){
+        dfd.resolve(true);
+    })
+    .fail(function(){
+        dfd.reject(false);
+    });
+    return dfd.promise();
+}
+
 
 function commitSubmitData(answerId) {
     $.ajax({
@@ -421,6 +511,29 @@ function revertSubmitData(answerId) {
     });
 }
 
+function postAnswerFailedDailog() {
+    var option = new Object();
+        option.parentId = '#inlineAnswerFrameBody';
+        option.message = '申し訳ありません。回答の投稿に失敗しました';
+        option.originalButton = '<button id=\'postAnswerFailed\' class=\'btn btn-primary\'>回答の作成に戻る</button>';
+        var dialog = new Dialog(option);
+        $('#postAnswerFailed').off('click');
+        $('#postAnswerFailed').on('click', function() {
+            revertFunction();
+            dialog.closeFunc();
+        });
+}
+
+function persuadeLoginDialog() {
+    var option = new Object();
+        option.parentId = '#inlineAnswerFrameBody';
+        option.message = 'ログイン情報が取得できませんでした。ログインし直してから回答をお願い致します。';
+        option.originalButton = '<button id=\'postAnswerFailed\' class=\'btn btn-primary\'>閉じる</button>';
+        new Dialog(option);
+        $('#postAnswerFailed').off('click');
+        $('#postAnswerFailed').on('click', submitEndAction);
+}
+
 function submitTextData(inputText) {
     let dfd = $.Deferred();
     let requestObj = new Object;
@@ -444,7 +557,7 @@ function submitTextData(inputText) {
 function submitTextImgData(answerId, textImgBinData) {
     let dfd = $.Deferred();
     if(textImgBinData === undefined) {
-        return dfd.resolve(answerId);
+        return dfd.resolve(true);
     }
     let requestParamObj = new Object;
     requestParamObj['textImage'] = textImgBinData;
@@ -456,10 +569,10 @@ function submitTextImgData(answerId, textImgBinData) {
         dataType : 'json'
     })
     .done(function(){
-        return dfd.resolve(answerId);
+        return dfd.resolve(true);
     })
     .fail(function(){
-        return dfd.resolve(-1);
+        return dfd.resolve(false);
     });
     return dfd.promise();
 }
@@ -467,38 +580,58 @@ function submitTextImgData(answerId, textImgBinData) {
 function submitLinkData(answerId) {
     let dfd = $.Deferred();
     if($('#fileUpLoadAreaPreview a').length === 0) {
-        return dfd.resolve(answerId);
+        return dfd.resolve(true);
     }
     let i = 0;
     for(i = 0; i < $('#fileUpLoadAreaPreview a').length; i++) {
         submitLinkDataFunc(answerId, i)
-        .then(function(retId){
-            if(retId === -1) {
+        .then(function(requestSucess){
+            if(!requestSucess) {
                 console.error("answerId : " + String(answerId) + " link : " + String(i));
+                return dfd.resolve(false);
             }
             if(i >= $('#fileUpLoadAreaPreview a').length - 1) {
-                return dfd.resolve(retId);
+                return dfd.resolve(true);
             }
         });
     }
     return dfd.promise();
+    // recursiveSubmitLinkData(answerId, 0)
+    // .then(function(requestSucess){
+    //     if(requestSucess) {
+    //         //return dfd.resolve(questionId, true);
+    //         return dfd.resolve(true);
+    //     } else {
+    //         // return dfd.resolve(questionId, false);
+    //         return dfd.resolve(false);
+    //     }
+    // });
+    // return dfd.promise();
 }
 
 function recursiveSubmitLinkData(answerId, currentIndex) {
     submitLinkDataFunc(answerId, currentIndex)
-    .then(function(retData) {
-        if(Number(retData) === -1) {
-            return dfd.resolve(-1);
+    .then(function(requestSucess) {
+        if(!requestSucess) {
+            return dfd.resolve(false);
         }
         if(currentIndex + 1 >= $('#fileUpLoadAreaPreview a').length) {
-            return dfd.resolve(answerId);
+            return dfd.resolve(true);
         }
-        recursiveSubmitLinkData(answerId, currentIndex + 1);
+        recursiveSubmitLinkData(questionId, currentIndex + 1);
     });
+    // .then(function(retData) {
+    //     if(Number(retData) === -1) {
+    //         return dfd.resolve(-1);
+    //     }
+    //     if(currentIndex + 1 >= $('#fileUpLoadAreaPreview a').length) {
+    //         return dfd.resolve(answerId);
+    //     }
+    //     recursiveSubmitLinkData(answerId, currentIndex + 1);
+    // });
 }
 
 function submitLinkDataFunc(answerId, currentIndex) {
-    debugger
     let dfd = $.Deferred();
     let requestParam = new Object;
     requestParam['linkFilename'] = changeJapaneseToCharacterCode($('#fileUpLoadAreaPreview a').eq(currentIndex)[0].innerHTML);
@@ -512,10 +645,12 @@ function submitLinkDataFunc(answerId, currentIndex) {
         dataType : 'json'
     })
     .done(function(){
-        return dfd.resolve(answerId);
+        // return dfd.resolve(answerId);
+        return dfd.resolve(true);
     })
     .fail(function(){
-        return dfd.resolve(-1);
+        // return dfd.resolve(-1);
+        return dfd.resolve(false);
     });
     return dfd.promise();
 }
@@ -523,4 +658,38 @@ function submitLinkDataFunc(answerId, currentIndex) {
 function submitEndAction() {
     localStorage.setItem('tmpQuestionIdFromFrame', parentQuestionId);
     window.location.href = "/inlineEndDummy";
+}
+
+function loadingfunctionInnerAnswerStart() {
+    let top = $('#inlineAnswerFrameBody').position().top;
+    let width = $('body').width();
+    $('.block').css('top', top);
+    $('.block').css('width', width);
+    $('.block').show();
+}
+
+function loadingfunctionInnerAnswerEnd() {
+    $('.block').hide();
+}
+
+function requestResizeImgData(binData) {
+    var dfd = $.Deferred();
+    var reqObj = new Object();
+    reqObj['imgData'] = binData;
+    //reqObj['dataSize'] = 300;
+    reqObj['dataSize'] = Math.floor($('#inputTextArea').width() / 3);
+    $.ajax({
+        type: 'POST',
+        url: '/requestResizeDataImg',
+        data: reqObj,
+        contentType : 'application/json',
+        dataType : 'json'
+    })
+    .done(function(resizeBinData){
+        return dfd.resolve(resizeBinData['resizeData']);
+    })
+    .fail(function(){
+        return dfd.reject();
+    })
+    return dfd.promise();
 }

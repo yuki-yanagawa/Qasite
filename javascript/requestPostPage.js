@@ -1,5 +1,6 @@
 var imgFrameDefaultSize = 200;
 $(function() {
+    loadingfunctionEnd();
     let height = $('body').height();
     let inputHeight = height / 2;
     $('#inputTextArea').height(inputHeight);
@@ -52,9 +53,18 @@ function previewButtonClick() {
     $('#inputPreview')[0].innerHTML = createPreviewText(inputText);
     let noImageFlg = $('#uploadedImageFileArea .hiddenValue').eq(1).length === 0;
     if(!noImageFlg) {
-        $('#inputPreview').append(appendEmptyImgDom(true));
+        loadingfunctionStart();
+        $('#inputPreview').append(appendEmptyImgDom());
+
         let binData = $('#uploadedImageFileArea .hiddenValue').eq(1).val();
-        $('#appendImgDom').attr('src', binData);
+        $('#appendImgDomWrap a').prop('href', binData);
+        requestResizeImgData(binData)
+        .then(function(resizeBindata){
+            if(resizeBindata !== undefined) {
+                $('#appendImgDom').attr('src', resizeBindata);
+            }
+            loadingfunctionEnd();
+        });
     }
 
     //Link file
@@ -72,6 +82,29 @@ function previewButtonClick() {
     }
     $('#fileUpLoadAreaPreview').show();
 }
+
+function requestResizeImgData(binData) {
+    var dfd = $.Deferred();
+    var reqObj = new Object();
+    reqObj['imgData'] = binData;
+    //reqObj['dataSize'] = 300;
+    reqObj['dataSize'] = Math.floor($('#inputTextArea').width() / 3);
+    $.ajax({
+        type: 'POST',
+        url: '/requestResizeDataImg',
+        data: reqObj,
+        contentType : 'application/json',
+        dataType : 'json'
+    })
+    .done(function(resizeBinData){
+        return dfd.resolve(resizeBinData['resizeData']);
+    })
+    .fail(function(){
+        return dfd.reject();
+    })
+    return dfd.promise();
+}
+
 
 function cancelBtClick() {
     window.location.href = "/";
@@ -145,11 +178,16 @@ function createPreviewText(inputText) {
     return retAdjustText;
 }
 
-function appendEmptyImgDom(onloadFlg) {
-    if(onloadFlg) {
-        return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\" onload=\"adjustImg();\"/></div>';
-    }
-    return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\"/></div>';
+// function appendEmptyImgDom(onloadFlg) {
+//     if(onloadFlg) {
+//         return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\" onload=\"adjustImg();\"/></div>';
+//     }
+//     return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\"/></div>';
+// }
+
+function appendEmptyImgDom() {
+    //return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><img id=\"appendImgDom\"/></div>';
+    return '</br><div id=\"appendImgDomWrap\" style=\"text-align:center;\"><a id=\"imgRawDataRequest\" data-lightbox=\"image-1\"><img id=\"appendImgDom\"/></a></div>';
 }
 
 function adjustImg() {
@@ -231,8 +269,8 @@ function adjustPreviweText(inputText) {
     return retAdjustText;
 }
 
+
 function submitFunction() {
-    debugger
     let inputTitle = $('#titleText').val();
     if(inputTitle.trim() === '') {
         $('#titleText').val(_autoCreateTitleText($('#inputTextArea').val()));
@@ -240,8 +278,10 @@ function submitFunction() {
     var option = new Object();
     option.parentId = '#requestPostBody';
     option.message = '質問を投稿しますか？';
-    option.originalButton = '<button id=\'postDataFuncId\' class=\'btn btn-primary\'>投稿する</button>' +
-    ' &nbsp;<button id=\'revertDataFuncId\' class=\'btn btn-primary\'>取り戻す</button>';
+    // option.originalButton = '<button id=\'postDataFuncId\' class=\'btn btn-primary\'>投稿する</button>' +
+    // ' &nbsp;<button id=\'revertDataFuncId\' class=\'btn btn-primary\'>取り戻す</button>';
+    option.originalButton = '<button id=\'revertDataFuncId\' class=\'btn btn-secondary\'>取り戻す</button>' +
+    ' &nbsp;<button id=\'postDataFuncId\' class=\'btn btn-primary\'>投稿する</button>';
     var dialog = new Dialog(option);
     $('#postDataFuncId').off('click');
     $('#revertDataFuncId').off('click');
@@ -257,36 +297,44 @@ function submitFunction() {
 }
 
 function submitFormData() {
-    
-    let textImgBinData = $('#inputPreview img').attr('src');
-    $('#inputPreview img').remove();
+    debugger
+    loadingfunctionStart();
+    // let textImgBinData = $('#inputPreview img').attr('src');
+    let binData = $('#uploadedImageFileArea .hiddenValue').eq(1).val();
+    // $('#inputPreview img').remove();
 
-    let inputText = $('#inputPreview')[0].innerHTML;
-    submitTextData(inputText)
-    .then(function(questionId){
-        if(isNaN(questionId) || Number(questionId) === -1) {
+    // let inputText = $('#inputPreview')[0].innerHTML;
+    var tmp = $('#inputPreview').clone(true);
+    //tmp.find('img').remove();
+    tmp.find('#appendImgDom').remove();
+    tmp.find('#imgRawDataRequest').removeAttr('href');
+    let inputText = tmp[0].innerHTML;
+
+    requestQuestionId()
+    .then(function(data) {
+        if(isNaN(data['questionId']) || Number(data['questionId']) === -1
+            || isNaN(data['userId']) || Number(data['userId']) === -1) {
             postQuestFailedDailog();
             return;
         }
-        submitTextImgData(questionId, textImgBinData)
-        .then(function(questionId, requestSucess){
-            if(!requestSucess) {
-                revertSubmitData(questionId);
-                return;
+        $.when(
+            submitQuestTextData(data['questionId'], data['userId'], inputText),
+            submitTextImgData(data['questionId'], binData),
+            submitLinkData(data['questionId'])
+        )
+        .then(function(resultText, resultImg, resultLinkData){
+            debugger
+            loadingfunctionEnd();
+            if(resultText && resultImg && resultLinkData) {
+                commitSubmitData(data['questionId']);
+            } else {
+                revertSubmitData(data['questionId']);
             }
-            submitLinkData(questionId)
-            .then(function(questionId, requestSucess){
-                if(requestSucess) {
-                    commitSubmitData(questionId);
-                    return;
-                } else {
-                    revertSubmitData(questionId);
-                    return;
-                }
-            });
-        })
+        });
     });
 }
+
+
 
 function commitSubmitData(questionId) {
     $.ajax({
@@ -331,11 +379,51 @@ function revertSubmitData(questionId) {
 function postQuestFailedDailog() {
     var option = new Object();
         option.parentId = '#requestPostBody';
-        option.message = '質問の投稿に失敗しました';
+        option.message = '申し訳ありません。質問の投稿に失敗しました';
         option.originalButton = '<button id=\'postQuestionFailed\' class=\'btn btn-primary\'>質問作成に戻る</button>';
         new Dialog(option);
         $('#postQuestionFailed').off('click');
         $('#postQuestionFailed').on('click', revertFunction);
+}
+
+function requestQuestionId() {
+    let dfd = $.Deferred();
+    $.ajax({
+        type: 'POST',
+        url: '/requestQuestionId',
+        contentType : 'application/json',
+        dataType : 'json'
+    })
+    .done(function(data){
+        return dfd.resolve(data);
+    })
+    .fail(function(){
+        return dfd.resolve(-1);
+    });
+    return dfd.promise();
+}
+
+function submitQuestTextData(questionId, userId, inputText) {
+    let dfd = $.Deferred();
+    let questObj = new Object;
+    questObj['title'] = changeJapaneseToCharacterCode($('#titleText').val());
+    questObj['text'] = changeJapaneseToCharacterCode(inputText);
+    questObj['type'] = $('#inputGroupSelect01').val();
+    questObj['userId'] = userId;
+    $.ajax({
+        type: 'POST',
+        url: '/postQuestTextData/' + String(questionId),
+        data: questObj,
+        contentType : 'application/json',
+        dataType : 'json'
+    })
+    .done(function(){
+        dfd.resolve(true);
+    })
+    .fail(function(){
+        dfd.reject(false);
+    });
+    return dfd.promise();
 }
 
 function submitTextData(inputText) {
@@ -363,7 +451,8 @@ function submitTextData(inputText) {
 function submitTextImgData(questionId, textImgBinData) {
     let dfd = $.Deferred();
     if(textImgBinData === undefined) {
-        return dfd.resolve(questionId, true);
+        //return dfd.resolve(questionId, true);
+        return dfd.resolve(true);
     }
     let questObj = new Object;
     questObj['textImage'] = textImgBinData;
@@ -375,10 +464,12 @@ function submitTextImgData(questionId, textImgBinData) {
         dataType : 'json'
     })
     .done(function(){
-        return dfd.resolve(questionId, true);
+        //return dfd.resolve(questionId, true);
+        return dfd.resolve(true);
     })
     .fail(function(){
-        return dfd.resolve(questionId, false);
+        //return dfd.resolve(questionId, false);
+        return dfd.resolve(false);
     });
     return dfd.promise();
 }
@@ -386,14 +477,17 @@ function submitTextImgData(questionId, textImgBinData) {
 function submitLinkData(questionId) {
     let dfd = $.Deferred();
     if($('#fileUpLoadAreaPreview a').length === 0) {
-        return dfd.resolve(questionId, true);
+        //return dfd.resolve(questionId, true);
+        return dfd.resolve(true);
     }
     recursiveSubmitLinkData(questionId, 0)
     .then(function(questionId, requestSucess){
         if(requestSucess) {
-            return dfd.resolve(questionId, true);
+            //return dfd.resolve(questionId, true);
+            return dfd.resolve(true);
         } else {
-            return dfd.resolve(questionId, false);
+            // return dfd.resolve(questionId, false);
+            return dfd.resolve(false);
         }
     });
     return dfd.promise();
@@ -493,6 +587,13 @@ function uploadFileData(e) {
     let fileReader = new FileReader();
     fileReader.onload = (function(e){
         //$('#uploadedFileArea').append('<a href=' + e.currentTarget.result + ' download>' + filename + '</a>')
+        let checkSize = $('.uploadFileListFrame').length;
+        if(checkSize >= 2) {
+            let i = 0;
+            for(i = 1; i < checkSize; i++) {
+                $('.uploadFileListFrame').eq(i).remove();
+            }
+        }
         let index = $('.uploadFileListFrame').length;
         let clone = $('.uploadFileListFrame').eq(0).clone();
         let cloneDomId = 'uploadFileIndex' + index;
@@ -552,4 +653,16 @@ function createSelector() {
         }
         parentObj.append(node);
     }
+}
+
+function loadingfunctionStart() {
+    let top = $('.container').position().top;
+    let width = $('body').width();
+    $('.block').css('top', top);
+    $('.block').css('width', width);
+    $('.block').show();
+}
+
+function loadingfunctionEnd() {
+    $('.block').hide();
 }

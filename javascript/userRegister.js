@@ -78,9 +78,11 @@ function registerFunction() {
 
     let mailText = $('#MailAddress').val().trim();
     let inputPassWord = $('#inputPassWord').val().trim();
-    let userName = changeJapaneseToCharacterCode($('#Username').val().trim());
-    inputPassWord = window.btoa(inputPassWord);
-    digestMessageSHA256(inputPassWord)
+    //let userName = changeJapaneseToCharacterCode($('#Username').val().trim());
+    let userName = changeUserNameToBase64($('#Username').val().trim());
+    // inputPassWord = window.btoa(inputPassWord);
+    //digestMessageSHA256(inputPassWord)
+    passSha256Create(inputPassWord)
     .then((digestpassWord) => {
         resisterDataSubmit(mailText, userName, digestpassWord);
     })

@@ -2,6 +2,7 @@
 var QUESTIONID = -1;
 var INIT_BODY_HEIGHT_SIZE = -1;
 var ANSWERID_LIST = [];
+var INTEXT_IMGSIZE = 300;
 $(function(){
     loadingfunctionStart();
     QUESTIONID = getQuestionId();
@@ -15,6 +16,7 @@ $(function(){
     // $('#submitBt').on('click', answerSubmit);
     INIT_BODY_HEIGHT_SIZE = $('body').get(0).scrollHeight;
     initImageFileEvent();
+    INTEXT_IMGSIZE = Math.floor($('.questionDetailText').width() / 3);
     $.when(
         getQuestionDetailData(),
         getAnswerDetailData()
@@ -193,10 +195,14 @@ function getQuestionDetailData() {
     // let reg = new RegExp(/\/getQuestionDetail-[0-9]+/g);
     // let questionId = uri.match(reg)[0].replaceAll(/\/getQuestionDetail-/g,"");
     let questionId = QUESTIONID;
+    var reqObj = new Object();
+    reqObj['intext_imgsize'] = INTEXT_IMGSIZE;
     $.ajax({
         type: 'POST',
         url: '/getQuestionDetail/' + questionId,
         contentType : 'application/json',
+        data : reqObj,
+        dataType : 'json',
     })
     .done(function(data){
         if(data === null || $.isEmptyObject(data)) {
@@ -210,8 +216,9 @@ function getQuestionDetailData() {
         $('#questionUserName').attr({href : linkText});
         $('#questionDate')[0].innerHTML = data['questionDate'];
         if(data['questionImageData'] !== undefined) {
-            $('#questionDetail #appendImgDomWrap').append('<img id=\"appendImgDom\"/>');
+            $('#questionDetail #appendImgDomWrap #imgRawDataRequest').append('<img id=\"appendImgDom\"/>');
             $('#questionDetail #appendImgDom').attr({src : data['questionImageData']});
+            $('#questionDetail #appendImgDomWrap #imgRawDataRequest').attr('href', '/getQuestionImgRawData/' + questionId);
         }
         if(data['quetionLinkFile'] !== undefined && data['quetionLinkFile'].length >= 1) {
             $('.questionDetailText').append('<div id=\"questLinkFileWrap\" class=\"text-muted\" style=\"font-size: 0.8rem;\">添付ファイル</div>');
@@ -511,21 +518,25 @@ function getAnswerImgAndLinkData(currentIndex) {
 
 function getAnswerImgAndLinkDataByAnswerId(answerId) {
     let dfd = $.Deferred();
+    var reqObj = new Object();
+    reqObj['intext_imgsize'] = INTEXT_IMGSIZE;
     $.ajax({
         type: 'POST',
         url: '/getAnswerImgAndLinkData/' + answerId,
         contentType : 'application/json',
-        dataType : 'json'
+        data : reqObj,
+        dataType : 'json',
     })
     .done(function(data){
         //update answer area
         debugger
         let answerDetailAreaId = '#answerDetail-' + String(answerId);
         if(data['answerImgData'] !== undefined) {
-            let imgInsertId = answerDetailAreaId + ' #appendImgDomWrap';
+            let imgInsertId = answerDetailAreaId + ' #appendImgDomWrap #imgRawDataRequest';
             if($(imgInsertId).length === 1) {
                 $(imgInsertId).append('<img id=\"appendImgDom\"/>');
                 $(answerDetailAreaId + ' #appendImgDom').attr({src:data['answerImgData']});
+                $(imgInsertId).attr('href', '/getAnswerImgRawData/' + answerId);
             }
         }
         if(data['answerLinkFile'] !== undefined && data['answerLinkFile'].length >= 1) {
