@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="lightbox.css">
     <link rel="stylesheet" href="inlineAnswerFrame.css">
 </head>
 <body id="inlineAnswerFrameBody">
@@ -27,7 +28,7 @@
             <label for="exampleFormControlTextarea1">回答記入欄</label>
             <div id="textAreaDiv">
                 <textarea class="form-control" id="inputTextArea"></textarea>
-                <div class="form-control" id="inputPreview" contenteditable="false"></div>
+                <div class="form-control" id="inputPreview" contenteditable="false" style="display: none; overflow: auto;"></div>
             </div>
             <div id="imgLinkArea">
                 <button type="button" class="btn btn-link mb-2" id="inputImageFileForUploadWrap">
@@ -79,11 +80,22 @@
             <button id="submitBt" type="button" class="btn btn-primary mb-2">回答をする</button>
         </div>
     </form>
+    <div class="block">
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+            <div>
+                <span>Loading...</span>
+            </div>
+        </div>
+    </div>
     <script src="jquery-3.7.1.min.js"></script>
     <script src="popper.min.js"></script>
     <script src="bootstrap.min.js"></script>
     <script src="common.js"></script>
     <script src="daialog.js"></script>
+    <script src="lightbox.js"></script>
     <script src="inlineAnswerFrame.js"></script>
 </body>
 </html>
