@@ -8,6 +8,8 @@ public enum ResponseContentType {
 	CSS("text/css", true),
 	HTML("text/html", true),
 	JPEG("image/jpeg", false),
+	PNG("image/png", false),
+	GIF("image/gif", false),
 	JAVASCRIPT("application/javascript", true),
 	JSON("application/json", true);
 	

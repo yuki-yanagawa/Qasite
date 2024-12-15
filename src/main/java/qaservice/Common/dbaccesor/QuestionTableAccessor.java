@@ -1,5 +1,6 @@
 package qaservice.Common.dbaccesor;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,10 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.h2.command.query.AllColumnsForPlan;
-
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.charcterutil.messageDigest.MessageDigestTypeSHA256;
+import qaservice.Common.img.ImageUtil;
+import qaservice.Common.model.user.UserInfo;
 import qaservice.Common.utiltool.GZipUtil;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
 import qaservice.WebServer.logger.ServerLogger;
@@ -61,8 +62,10 @@ public class QuestionTableAccessor {
 				Map<String, Object> innerRetMap = new HashMap<>();
 				int questId = rs.getInt(1);
 				innerRetMap.put(QuestionTableColoumn.QUESTIONID.clientCommonName, questId);
-				innerRetMap.put(QuestionTableColoumn.QUESTION_TITLE.clientCommonName,
-						new String(rs.getBytes(2), CharUtil.getCharset()));
+				// Change data base column type blob -> string
+//				innerRetMap.put(QuestionTableColoumn.QUESTION_TITLE.clientCommonName,
+//						new String(rs.getBytes(2), CharUtil.getCharset()));
+				innerRetMap.put(QuestionTableColoumn.QUESTION_TITLE.clientCommonName, rs.getString(2));
 				innerRetMap.put(QuestionTableColoumn.QUESTTYPE.clientCommonName, rs.getInt(3));
 				innerRetMap.put(QuestionTableColoumn.UPDATE_DATE.clientCommonName, rs.getString(4).split("\\.")[0]);
 				if(answerIdByQuestionId.containsKey(questId)) {
@@ -84,7 +87,7 @@ public class QuestionTableAccessor {
 		return retMapList;
 	}
 
-	public static Map<String, Object> getQuestionDetailData(Connection conn, int questionId) {
+	public static Map<String, Object> getQuestionDetailData(Connection conn, int questionId, int intextImgSize) {
 		Map<String, Object> retMap = new HashMap<>();
 		String sql = "SELECT Q.QUESTION_DETAIL_DATA, Q.QUESTTYPE, USR.USERNAME , Q.USERID, Q.UPDATE_DATE FROM QUESTIONTABLE AS Q"
 				+ " JOIN USERTABLE AS USR ON USR.USERID = Q.USERID"
@@ -93,7 +96,9 @@ public class QuestionTableAccessor {
 			ps.setInt(1, questionId);
 			ResultSet rs = ps.executeQuery();
 			if(rs.next()) {
-				retMap.put("questionDetailData", new String(rs.getBytes(1), CharUtil.getCharset()));
+				// Change data base column type blob -> string
+//				retMap.put("questionDetailData", new String(rs.getBytes(1), CharUtil.getCharset()));
+				retMap.put("questionDetailData", rs.getString(1));
 				retMap.put("questionType", rs.getInt(2));
 				retMap.put("questionUserName", rs.getString(3));
 				retMap.put("questionUserId", rs.getInt(4));
@@ -104,7 +109,7 @@ public class QuestionTableAccessor {
 			return new HashMap<>();
 		}
 
-		Map<String, Object> imgMap = getQuestionImageData(conn, questionId);
+		Map<String, Object> imgMap = getQuestionImageData(conn, questionId, true, intextImgSize);
 		if(!imgMap.isEmpty()) {
 			retMap.putAll(imgMap);
 		}
@@ -116,6 +121,14 @@ public class QuestionTableAccessor {
 	}
 
 	public static Map<String, Object> getQuestionImageData(Connection conn, int questionId) {
+		return getQuestionImageData(conn, questionId, true);
+	}
+
+	public static Map<String, Object> getQuestionImageData(Connection conn, int questionId, boolean needDecompressed) {
+		return getQuestionImageData(conn, questionId, needDecompressed, -1);
+	}
+
+	public static Map<String, Object> getQuestionImageData(Connection conn, int questionId, boolean needDecompressed, int imgResizeData) {
 		Map<String, Object> retMap = new HashMap<>();
 		String sql = "SELECT QUESTION_IMAGEDATA FROM " + SUBTABLENAME_IMAGE + " WHERE QUESTIONID = ?";
 		try(PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -123,12 +136,25 @@ public class QuestionTableAccessor {
 			ResultSet rs = ps.executeQuery();
 			if(rs.next()) {
 				//adjust gzip
-				byte[] decompBytes = GZipUtil.decompressed(rs.getBytes(1));
-				retMap.put("questionImageData", new String(decompBytes, CharUtil.getCharset()));
+				byte[] imgBytes;
+				if(needDecompressed) {
+					imgBytes = decompressedDataByGzip(rs.getBytes(1));
+					if(imgResizeData == -1) {
+						retMap.put("questionImageData", new String(imgBytes, CharUtil.getCharset()));
+					} else {
+						retMap.put("questionImageData", ImageUtil.reCreateBase64ImgData(imgBytes, imgResizeData));
+					}
+				} else {
+					imgBytes = rs.getBytes(1);
+					retMap.put("questionImageData", new String(imgBytes, CharUtil.getCharset()));
+				};
 			}
 			return retMap;
 		} catch(SQLException e) {
 			ServerLogger.getInstance().warn(e, "getQuestionImageData error. data base connection");
+			return new HashMap<>();
+		} catch(IOException e) {
+			ServerLogger.getInstance().warn(e, "resizeImgData error. data base connection");
 			return new HashMap<>();
 		}
 	}
@@ -143,7 +169,7 @@ public class QuestionTableAccessor {
 			while(rs.next()) {
 				Map<String, Object> innerMap = new HashMap<>();
 				innerMap.put("linkFileName", new String(rs.getBytes(1), CharUtil.getCharset()));
-				innerMap.put("linkFileData", new String(rs.getBytes(2), CharUtil.getCharset()));
+				innerMap.put("linkFileData", new String(decompressedDataByGzip(rs.getBytes(2)), CharUtil.getCharset()));
 				retArrayList.add(innerMap);
 			}
 			retMap.put("quetionLinkFile", retArrayList);
@@ -154,6 +180,31 @@ public class QuestionTableAccessor {
 		}
 	}
 
+	public static int getQuestionId(Connection conn, String username) {
+		int userId = UserTableAccessor.getUserIdByUserName(conn, username);
+		if(userId == -1) {
+			ServerLogger.getInstance().warn("QuestionTable Insert Error. user id get failed");
+			return -1;
+		}
+
+		int newId = getRegistNumber(conn);
+		if(newId == -1) {
+			ServerLogger.getInstance().warn("QuestionTable Insert Error");
+			return -1;
+		}
+		return newId;
+	}
+
+	/**
+	 * This method can not use. because questionDetailData and titleData are changed varchar.
+	 * 
+	 * @param conn
+	 * @param titleData
+	 * @param questionDetailData
+	 * @param username
+	 * @param type
+	 * @return
+	 */
 	public static int insertQuestionTable(Connection conn, byte[] titleData, byte[] questionDetailData, String username, int type) {
 		int newId = getRegistNumber(conn);
 		if(newId == -1) {
@@ -266,7 +317,34 @@ public class QuestionTableAccessor {
 		return true;
 	}
 
+	public static boolean insertQuestionTextData(
+			Connection conn, String textTitle, String textDetail, int type, 
+			UserInfo userInfo, int questionId) {
+		String sql = "INSERT INTO QUESTIONTABLE "
+				+ "(QUESTIONID, QUESTION_TITLE, QUESTION_DETAIL_DATA, QUESTTYPE, USERID, QUESTVALID, UPDATE_DATE) "
+				+ "VALUES(?, ?, ?, ?, ?, ?, ?)";
+		try(PreparedStatement ps = conn.prepareStatement(sql)){
+			int setIndex = 1;
+			ps.setInt(setIndex++, questionId);
+			ps.setString(setIndex++, textTitle);
+			ps.setString(setIndex++, textDetail);
+			ps.setInt(setIndex++, type);
+			ps.setInt(setIndex++, userInfo.getUserId());
+			ps.setBoolean(setIndex++, false);
+			ps.setTimestamp(setIndex++, new Timestamp(System.currentTimeMillis()));
+			int result = ps.executeUpdate();
+			if(result == 1) {
+				return true;
+			}
+		} catch(SQLException e) {
+			ServerLogger.getInstance().warn(e, "QUESTIONSUBTABLE-INSERT Text Error.");
+		}
+		return false;
+	}
+
 	public static boolean insertQuestionImgData(Connection conn, byte[] imgData, int questionId) {
+		//insert link file data compressed
+		imgData = compressedDataByGzip(imgData);
 		String sql = "INSERT INTO " + SUBTABLENAME_IMAGE + " (QUESTIONID, QUESTION_IMAGEDATA) VALUES(?, ?)";
 		try(PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setInt(1, questionId);
@@ -282,6 +360,8 @@ public class QuestionTableAccessor {
 	}
 
 	public static boolean insertQuestionLinkData(Connection conn, int fileLinkId, byte[] filename, byte[] filedata, int questionId) {
+		//insert link file data compressed
+		filedata = compressedDataByGzip(filedata);
 		String sql = "INSERT INTO " + SUBTABLENAME_LINKFILE
 				+ " (QUESTIONID, QUESTION_LINKFILEID, QUESTION_LINKFILENAME, QUESTION_LINKFILEDATA)"
 				+ " VALUES(?, ?, ? ,?)";
@@ -480,5 +560,13 @@ public class QuestionTableAccessor {
 
 	private static synchronized int getRegistNumber(Connection conn) {
 		return NumberingTableAccessor.getMyId(conn, TABLENAME);
+	}
+
+	private static byte[] compressedDataByGzip(byte[] rawData) {
+		return GZipUtil.compressed(rawData);
+	}
+
+	private static byte[] decompressedDataByGzip(byte[] compressedData) {
+		return GZipUtil.decompressed(compressedData);
 	}
 }

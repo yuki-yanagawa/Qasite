@@ -6,11 +6,29 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import qaservice.Common.model.user.UserInfo;
 import qaservice.WebServer.logger.ServerLogger;
 
 public class SessionOperator {
-	private static Map<String, String> sessionUserMap_ = new HashMap<>();
+	private static class SessionTimeKeeperEachUser {
+		private String userName;
+		private long registTime;
+
+		SessionTimeKeeperEachUser(String userName) {
+			this.userName = userName;
+			registTime = System.currentTimeMillis();
+		}
+
+		String getUserName() {
+			return userName;
+		}
+
+		long getRegistTime() {
+			return registTime;
+		}
+	}
+	// 30min setting
+	private static final long EXPIRE_TIME = 30 * 60 * 1000;
+	private static Map<String, SessionTimeKeeperEachUser> sessionUserMap_ = new HashMap<>();
 	//private static Map<String, UserInfo> sessionUserMap_ = new HashMap<>();
 	private static Map<String, String> userExistChecker_ = new HashMap<>();
 	
@@ -22,7 +40,7 @@ public class SessionOperator {
 		}
 		String sessionId = createSessionId(userName);
 		userExistChecker_.put(userName, sessionId);
-		sessionUserMap_.put(sessionId, userName);
+		sessionUserMap_.put(sessionId, new SessionTimeKeeperEachUser(userName));
 		return sessionId;
 	}
 	
@@ -46,7 +64,14 @@ public class SessionOperator {
 //			System.out.println(e.getKey() + " : " + e.getValue());
 //		});
 		String sessionId = getSessionIdFromCookie(cookie);
-		return sessionUserMap_.get(sessionId);
+		SessionTimeKeeperEachUser sessionTimeKeeperEachUser = sessionUserMap_.get(sessionId);
+		if(sessionTimeKeeperEachUser == null) {
+			return null;
+		}
+		if(System.currentTimeMillis() - sessionTimeKeeperEachUser.getRegistTime() >= EXPIRE_TIME) {
+			return null;
+		}
+		return sessionTimeKeeperEachUser.getUserName();
 	}
 
 	public static String getSessionIdFromCookie(String cookie) {

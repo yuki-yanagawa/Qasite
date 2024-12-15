@@ -1,7 +1,6 @@
 package qaservice.WebServer.accessDBServer;
 
 import java.sql.Connection;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -50,11 +49,11 @@ public class AnswerDataLogic {
 		}
 	}
 
-	public static boolean insertQuestionImgData(byte[] imgData, int answerId) {
+	public static boolean insertAnswerImgData(byte[] imgData, int answerId) {
 		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
 		Connection conn = dbConnOpe.getConnetion();
 		try {
-			return AnswerTableAccessor.insertQuestionImgData(conn, imgData, answerId);
+			return AnswerTableAccessor.insertAnswerImgData(conn, imgData, answerId);
 		} finally {
 			dbConnOpe.endUsedConnctionNotify(conn);
 		}
@@ -90,11 +89,11 @@ public class AnswerDataLogic {
 		}
 	}
 
-	public static boolean insertQuestionLinkData(int fileLinkId, byte[] filename, byte[] filedata, int answerId) {
+	public static boolean insertAnswerLinkData(int fileLinkId, byte[] filename, byte[] filedata, int answerId) {
 		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
 		Connection conn = dbConnOpe.getConnetion();
 		try {
-			return AnswerTableAccessor.insertQuestionLinkData(conn, fileLinkId, filename, filedata, answerId);
+			return AnswerTableAccessor.insertAnswerLinkData(conn, fileLinkId, filename, filedata, answerId);
 		} finally {
 			dbConnOpe.endUsedConnctionNotify(conn);
 		}
@@ -104,7 +103,17 @@ public class AnswerDataLogic {
 		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
 		Connection conn = dbConnOpe.getConnetion();
 		try {
-			return AnswerTableAccessor.getAnswerImageData(conn, answerId);
+			return AnswerTableAccessor.getAnswerImageData(conn, answerId, -1);
+		} finally {
+			dbConnOpe.endUsedConnctionNotify(conn);
+		}
+	}
+
+	public static Map<String, Object> getAnswerImageData(int answerId, int imgResizeData) {
+		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
+		Connection conn = dbConnOpe.getConnetion();
+		try {
+			return AnswerTableAccessor.getAnswerImageData(conn, answerId, imgResizeData);
 		} finally {
 			dbConnOpe.endUsedConnctionNotify(conn);
 		}
@@ -115,6 +124,26 @@ public class AnswerDataLogic {
 		Connection conn = dbConnOpe.getConnetion();
 		try {
 			return AnswerTableAccessor.getAnswerLinkFileData(conn, answerId);
+		} finally {
+			dbConnOpe.endUsedConnctionNotify(conn);
+		}
+	}
+
+	public static int getAnswerId(String username) {
+		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
+		Connection conn = dbConnOpe.getConnetion();
+		try {
+			return AnswerTableAccessor.getAnswerId(conn, username);
+		} finally {
+			dbConnOpe.endUsedConnctionNotify(conn);
+		}
+	}
+
+	public static boolean insertAnswerTextData(int answerId, String answerData, int questionId, int userId) {
+		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
+		Connection conn = dbConnOpe.getConnetion();
+		try {
+			return AnswerTableAccessor.insertAnswerTextData(conn, answerId, answerData, questionId, userId);
 		} finally {
 			dbConnOpe.endUsedConnctionNotify(conn);
 		}

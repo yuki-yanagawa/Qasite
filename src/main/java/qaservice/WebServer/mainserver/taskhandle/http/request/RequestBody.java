@@ -107,7 +107,7 @@ class RequestBody {
 		}
 		String[] tmpLine = casheBodyData_.split(key + '=');
 		if(tmpLine.length != 2) {
-			ServerLogger.getInstance().warn("get value error key="+key);
+			ServerLogger.getInstance().info("donot get value error key="+key);
 			return null;
 		}
 		int endIndex = tmpLine[1].indexOf('&');

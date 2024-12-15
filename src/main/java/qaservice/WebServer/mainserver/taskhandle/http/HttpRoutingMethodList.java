@@ -3,8 +3,6 @@ package qaservice.WebServer.mainserver.taskhandle.http;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
@@ -21,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.dbaccesor.AnswerTableAccessor;
+import qaservice.Common.img.ImageUtil;
+import qaservice.Common.mailutil.MailSendUtil;
 import qaservice.Common.model.user.UserInfo;
 import qaservice.Common.utiltool.GZipUtil;
 import qaservice.WebServer.accessDBServer.AnswerDataLogic;
@@ -86,6 +86,29 @@ class HttpRoutingMethodList {
 		return new ResponseMessageTypeGetFile(ResponseContentType.JAVASCRIPT, fileByteData, requestMess.getHttpProtocol());
 	}
 
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/images/*")
+	static ResponseMessage imagesFileResponse(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		String imgPath = requestMess.getRequestPath();
+		if(imgPath.startsWith("/")) {
+			imgPath = imgPath.substring(1);
+		}
+		byte[] fileByteData = FileManager.getInstance().fileRead(imgPath);
+		if(fileByteData == null) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, imgPath + "is not Found.", nowActiveMethod());
+		}
+		ResponseContentType contentType;
+		if(imgPath.toUpperCase().endsWith("PNG")) {
+			contentType = ResponseContentType.PNG;
+		} else if(imgPath.toUpperCase().endsWith("JPEG")) {
+			contentType = ResponseContentType.JPEG; 
+		} else if(imgPath.toUpperCase().endsWith("GIF")) {
+			contentType = ResponseContentType.GIF;
+		} else {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, imgPath + "is not Found.", nowActiveMethod());
+		}
+		return new ResponseMessageTypeGetFile(contentType, fileByteData, requestMess.getHttpProtocol());
+	}
+
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/*.css")
 	static ResponseMessage cssResponse(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
 		String cssPath = requestMess.getRequestPath();
@@ -121,22 +144,26 @@ class HttpRoutingMethodList {
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getQuestionAllData")
 	static ResponseMessage getQuestionAllData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		boolean enabledGzipCompressed = acceptableGZIPcompressedBodyData(requestMess);
 		//DB ACCSSEOR
 		byte[] answerPatternBytes = requestMess.getRequestBodyDataByKey("answerPattern", false);
 		int answerPattern = 0; //ALL
 		if(answerPatternBytes != null) {
 			try {
-				answerPattern = Integer.parseInt(new String(answerPatternBytes, CharUtil.getCharset()));
+				answerPattern = Integer.parseInt(new String(answerPatternBytes, CharUtil.getAjaxCharset()));
 			} catch(NumberFormatException e) {
 				answerPattern = 0;
 			}
 		}
 		List<Map<String, Object>> retMapList = QuestionDataLogic.getAllQuestionTitleData(answerPattern);
 		byte[] bytes = createJsonData(retMapList);
+		if(enabledGzipCompressed) {
+			bytes = GZipUtil.compressed(bytes);
+		}
 		if(bytes == null) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "response data create error.", nowActiveMethod());
 		}
-		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol(), enabledGzipCompressed);
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/searchQuestionData")
@@ -146,7 +173,7 @@ class HttpRoutingMethodList {
 		int answerPattern = 0; //ALL
 		if(answerPatternBytes != null) {
 			try {
-				answerPattern = Integer.parseInt(new String(answerPatternBytes, CharUtil.getCharset()));
+				answerPattern = Integer.parseInt(new String(answerPatternBytes, CharUtil.getAjaxCharset()));
 			} catch(NumberFormatException e) {
 				answerPattern = 0;
 			}
@@ -158,6 +185,60 @@ class HttpRoutingMethodList {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "response data create error.", nowActiveMethod());
 		}
 		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/requestQuestionId")
+	static ResponseMessage requestQuestionId(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		UserInfo userInfo = getUserInfoFromCookie(requestMess);
+		int result = QuestionDataLogic.getQuestionId(userInfo.getUserName());
+		Map<String, String> postQuestionResult = new HashMap<>();
+		postQuestionResult.put("questionId", String.valueOf(result));
+		postQuestionResult.put("userId", String.valueOf(userInfo.getUserId()));
+		byte[] bytes = createJsonData(postQuestionResult);
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/postQuestTextData/*")
+	static ResponseMessage postQuestTextData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		UserInfo userInfo = getUserInfoFromCookie(requestMess);
+		String requestPath = requestMess.getRequestPath();
+		int questionId = getIdFromRequestPath(requestPath, "/postQuestTextData/([0-9]+)");
+		if(userInfo == null) {
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+		}
+		byte[] titleBytes = requestMess.getRequestBodyDataByKey("title", false);
+		byte[] typeBytes = requestMess.getRequestBodyDataByKey("type", false);
+		byte[] questionBytes = requestMess.getRequestBodyDataByKey("text", false);
+		byte[] userIdBytes = requestMess.getRequestBodyDataByKey("userId", false);
+		
+		//title is encodeURI --- UTF-8
+		String title = new String(titleBytes, CharUtil.getAjaxCharset());
+		//question is encodeURI --- UTF-8
+		String question = new String(questionBytes, CharUtil.getAjaxCharset());
+		int type = -1;
+		try {
+			type = Integer.parseInt(new String(typeBytes, CharUtil.getAjaxCharset()));
+		} catch(NumberFormatException e) {
+			ServerLogger.getInstance().warn("questionPost error type no get error : " + new String(typeBytes, CharUtil.getAjaxCharset()));
+			type = -1;
+		}
+		int userId = -1;
+		try {
+			userId = Integer.parseInt(new String(userIdBytes, CharUtil.getAjaxCharset()));
+		} catch(NumberFormatException e) {
+			ServerLogger.getInstance().warn("questionPost error type no get error : " + new String(userIdBytes, CharUtil.getAjaxCharset()));
+			userId = -1;
+		}
+		if(type == -1 || userId == -1) {
+			ServerLogger.getInstance().warn("userId or type getting Error");
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+		}
+		boolean result = QuestionDataLogic.insertQuestionTextData(title, question, type, userInfo, questionId);
+		if(result) {
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+		} else {
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+		}
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/postQuestion")
@@ -189,9 +270,9 @@ class HttpRoutingMethodList {
 			}
 			int type = -1;
 			try {
-				type = Integer.parseInt(new String(typeBytes, CharUtil.getCharset()));
+				type = Integer.parseInt(new String(typeBytes, CharUtil.getAjaxCharset()));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn("questionPost error type no get error : " + new String(typeBytes, CharUtil.getCharset()));
+				ServerLogger.getInstance().warn("questionPost error type no get error : " + new String(typeBytes, CharUtil.getAjaxCharset()));
 				type = -1;
 			}
 			if(type == -1) {
@@ -209,18 +290,18 @@ class HttpRoutingMethodList {
 	static ResponseMessage postQuestionImgData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
 		String requestPath = requestMess.getRequestPath();
 		int questionId = getIdFromRequestPath(requestPath, "/postQuestionImgData/([0-9]+)");
-		UserInfo userInfo = getUserInfoFromCookie(requestMess);
-		if(userInfo == null) {
-			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
-		}
-		boolean autentiacte = QuestionDataLogic.isPostQuestUser(questionId, userInfo.getUserId());
-		if(!autentiacte) {
-			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
-		}
+//		UserInfo userInfo = getUserInfoFromCookie(requestMess);
+//		if(userInfo == null) {
+//			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+//		}
+//		boolean autentiacte = QuestionDataLogic.isPostQuestUser(questionId, userInfo.getUserId());
+//		if(!autentiacte) {
+//			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+//		}
 		byte[] imgData = requestMess.getRequestBodyDataByKey("textImage", false);
 
 		//Data compressed
-		imgData = GZipUtil.compressed(imgData);
+		//imgData = GZipUtil.compressed(imgData);
 		boolean result = QuestionDataLogic.insertQuestionImgData(imgData, questionId);
 		if(result) {
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
@@ -233,20 +314,20 @@ class HttpRoutingMethodList {
 	static ResponseMessage postQuestionLinkData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
 		String requestPath = requestMess.getRequestPath();
 		int questionId = getIdFromRequestPath(requestPath, "/postQuestionLinkData/([0-9]+)");
-		UserInfo userInfo = getUserInfoFromCookie(requestMess);
-		if(userInfo == null) {
-			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
-		}
-		boolean autentiacte = QuestionDataLogic.isPostQuestUser(questionId, userInfo.getUserId());
-		if(!autentiacte) {
-			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
-		}
+//		UserInfo userInfo = getUserInfoFromCookie(requestMess);
+//		if(userInfo == null) {
+//			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+//		}
+//		boolean autentiacte = QuestionDataLogic.isPostQuestUser(questionId, userInfo.getUserId());
+//		if(!autentiacte) {
+//			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+//		}
 		byte[] filenameBytes = requestMess.getRequestBodyDataByKey("linkFilename", false);
 		byte[] filedataBytes = requestMess.getRequestBodyDataByKey("linkFileData", false);
 		byte[] fileIdBytes = requestMess.getRequestBodyDataByKey("linkFileId", false);
 		int fileId = -1;
 		try {
-			fileId = Integer.parseInt(new String(fileIdBytes, CharUtil.getCharset()));
+			fileId = Integer.parseInt(new String(fileIdBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
 			fileId = -1;
 		}
@@ -356,14 +437,79 @@ class HttpRoutingMethodList {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "question id getting error from requestparameter", nowActiveMethod());
 		}
 
-		Map<String, Object> detailDataMap = QuestionDataLogic.getQuestionDetailData(questionId);
+		byte[] intextImgSizeBytes = requestMess.getRequestBodyDataByKey("intext_imgsize");
+		int intextImgSize = -1;
+		if(intextImgSizeBytes != null) {
+			intextImgSize = Integer.parseInt(new String(intextImgSizeBytes, CharUtil.getAjaxCharset()));
+		}
+
+		Map<String, Object> detailDataMap = QuestionDataLogic.getQuestionDetailData(questionId, intextImgSize);
 		byte[] bytes = createJsonData(detailDataMap);
 		if(enabledGzipCompressed) {
 			bytes = GZipUtil.compressed(bytes);
 		}
 		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol(), enabledGzipCompressed);
 	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/requestAnswerId")
+	static ResponseMessage requestAnswerId(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		UserInfo userInfo = getUserInfoFromCookie(requestMess);
+		if(userInfo == null) {
+			Map<String, String> postAnswerResult = new HashMap<>();
+			postAnswerResult.put("answerId", String.valueOf(-1));
+			postAnswerResult.put("userId", String.valueOf(-1));
+			byte[] bytes = createJsonData(postAnswerResult);
+			return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		}
+		int result = AnswerDataLogic.getAnswerId(userInfo.getUserName());
+		Map<String, String> postAnswerResult = new HashMap<>();
+		postAnswerResult.put("answerId", String.valueOf(result));
+		postAnswerResult.put("userId", String.valueOf(userInfo.getUserId()));
+		byte[] bytes = createJsonData(postAnswerResult);
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/postAnswerTextData/*")
+	static ResponseMessage postAnswerTextData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		UserInfo userInfo = getUserInfoFromCookie(requestMess);
+		String requestPath = requestMess.getRequestPath();
+		int answerId = getIdFromRequestPath(requestPath, "/postAnswerTextData/([0-9]+)");
+		if(userInfo == null) {
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+		}
 	
+		byte[] answerBytes = requestMess.getRequestBodyDataByKey("text", false);
+		byte[] userIdBytes = requestMess.getRequestBodyDataByKey("userId", false);
+		byte[] questionIdBytes= requestMess.getRequestBodyDataByKey("questionId", false);
+
+		//answer is encodeURI --- UTF-8
+		String answer = new String(answerBytes, CharUtil.getAjaxCharset());
+		int userId = -1;
+		try {
+			userId = Integer.parseInt(new String(userIdBytes, CharUtil.getAjaxCharset()));
+		} catch(NumberFormatException e) {
+			ServerLogger.getInstance().warn("answer post error type no get error : " + new String(userIdBytes, CharUtil.getAjaxCharset()));
+			userId = -1;
+		}
+		int questionId = -1;
+		try {
+			questionId = Integer.parseInt(new String(questionIdBytes, CharUtil.getAjaxCharset()));
+		} catch(NumberFormatException e) {
+			ServerLogger.getInstance().warn("answer post error type no get error : " + new String(questionIdBytes, CharUtil.getAjaxCharset()));
+			questionId = -1;
+		}
+		if(userId == -1 || questionId == -1) {
+			ServerLogger.getInstance().warn("userId or type getting Error");
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+		}
+		boolean result = AnswerDataLogic.insertAnswerTextData(answerId, answer, questionId, userId);
+		if(result) {
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
+		} else {
+			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
+		}
+	}
+
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/postAnswer/*")
 	static ResponseMessage postAnswer(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
 		String requestPath = requestMess.getRequestPath();
@@ -407,7 +553,7 @@ class HttpRoutingMethodList {
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		byte[] imgData = requestMess.getRequestBodyDataByKey("textImage", false);
-		boolean result = AnswerDataLogic.insertQuestionImgData(imgData, answerId);
+		boolean result = AnswerDataLogic.insertAnswerImgData(imgData, answerId);
 		if(result) {
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
@@ -432,7 +578,7 @@ class HttpRoutingMethodList {
 		byte[] fileIdBytes = requestMess.getRequestBodyDataByKey("linkFileId", false);
 		int fileId = -1;
 		try {
-			fileId = Integer.parseInt(new String(fileIdBytes, CharUtil.getCharset()));
+			fileId = Integer.parseInt(new String(fileIdBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
 			fileId = -1;
 		}
@@ -440,7 +586,7 @@ class HttpRoutingMethodList {
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 
-		boolean result = AnswerDataLogic.insertQuestionLinkData(fileId, filenameBytes, filedataBytes, answerId);
+		boolean result = AnswerDataLogic.insertAnswerLinkData(fileId, filenameBytes, filedataBytes, answerId);
 		if(result) {
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
@@ -490,6 +636,7 @@ class HttpRoutingMethodList {
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getAnswerDetail/*")
 	static ResponseMessage getAnswerDetail(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		boolean enabledGzipCompressed = acceptableGZIPcompressedBodyData(requestMess);
 		String requestPath = requestMess.getRequestPath();
 		int questionId = -1;
 		Pattern pattern = Pattern.compile("/getAnswerDetail/([0-9]+)");
@@ -513,7 +660,10 @@ class HttpRoutingMethodList {
 		}
 		List<Map<String, Object>> retList = AnswerDataLogic.getAnswerDetailData(questionId, userInfo);
 		byte[] bytes = createJsonData(retList);
-		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		if(enabledGzipCompressed) {
+			bytes = GZipUtil.compressed(bytes);
+		}
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol(), enabledGzipCompressed);
 	}
 	
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/login")
@@ -527,20 +677,22 @@ class HttpRoutingMethodList {
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/loginInfo")
 	static ResponseMessage loginInfo(RequestMessage requestMess) {
-		byte[] nameBytes = requestMess.getRequestBodyDataByKey("name");
-		byte[] checkedBytes = requestMess.getRequestBodyDataByKey("checked");
-		boolean checked = Boolean.parseBoolean(new String(checkedBytes, CharUtil.getCharset()));
-		String username = new String(nameBytes, CharUtil.getCharset());
-		String password;
-		if(checked) {
-			byte[] passwordBytes = requestMess.getRequestBodyDataByKey("password", true);
-			String passwordStr = new String(passwordBytes, CharUtil.getCharset());
-			byte[] sha256Bytes = CharUtil.exchangeStrToByte(passwordStr, ",");
-			password = Base64.getEncoder().encodeToString(sha256Bytes);
-		} else {
-			byte[] passwordBytes = requestMess.getRequestBodyDataByKey("password", false);
-			password = new String(passwordBytes, CharUtil.getCharset());
-		}
+		byte[] nameBytes = requestMess.getRequestBodyDataByKey("name", true);
+//		byte[] checkedBytes = requestMess.getRequestBodyDataByKey("checked");
+//		boolean checked = Boolean.parseBoolean(new String(checkedBytes, CharUtil.getCharset()));
+		String username = new String(nameBytes, CharUtil.getAjaxCharset());
+		byte[] passwordBytes = requestMess.getRequestBodyDataByKey("password");
+		String password = new String(passwordBytes, CharUtil.getAjaxCharset());
+//		String password;
+//		if(checked) {
+//			byte[] passwordBytes = requestMess.getRequestBodyDataByKey("password", true);
+//			String passwordStr = new String(passwordBytes, CharUtil.getCharset());
+//			byte[] sha256Bytes = CharUtil.exchangeStrToByte(passwordStr, ",");
+//			password = Base64.getEncoder().encodeToString(sha256Bytes);
+//		} else {
+//			byte[] passwordBytes = requestMess.getRequestBodyDataByKey("password", false);
+//			password = new String(passwordBytes, CharUtil.getCharset());
+//		}
 		
 		//DB search logic
 		boolean loginResult = UserDataLogic.existUserData(username, password);
@@ -577,7 +729,7 @@ class HttpRoutingMethodList {
 		byte[] actionBytes = requestMess.getRequestBodyDataByKey("action", false);
 		int actionResult = 0;
 		try {
-			actionResult = Integer.parseInt(new String(actionBytes, CharUtil.getCharset()));
+			actionResult = Integer.parseInt(new String(actionBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
 			ServerLogger.getInstance().warn(e, "get action result error from request Param");
 			answerId = 0;
@@ -633,7 +785,7 @@ class HttpRoutingMethodList {
 		byte[] actionBytes = requestMess.getRequestBodyDataByKey("action", false);
 		int actionResult = 0;
 		try {
-			actionResult = Integer.parseInt(new String(actionBytes, CharUtil.getCharset()));
+			actionResult = Integer.parseInt(new String(actionBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
 			ServerLogger.getInstance().warn(e, "get action result error from request Param");
 			answerId = 0;
@@ -664,10 +816,10 @@ class HttpRoutingMethodList {
 		byte[] nameBytes = requestMess.getRequestBodyDataByKey("userName");
 		byte[] passwordBytes = requestMess.getRequestBodyDataByKey("digest");
 		byte[] emailTextBytes = requestMess.getRequestBodyDataByKey("mailText");
-		String usernameByBase64 = new String(nameBytes, CharUtil.getCharset());
-		String username = new String(Base64.getDecoder().decode(usernameByBase64), CharUtil.getCharset());
-		String passwordStr = new String(passwordBytes, CharUtil.getCharset());
-		String emailText = new String(emailTextBytes, CharUtil.getCharset());
+		String usernameByBase64 = new String(nameBytes, CharUtil.getAjaxCharset());
+		String username = new String(Base64.getDecoder().decode(usernameByBase64), CharUtil.getAjaxCharset());
+		String passwordStr = new String(passwordBytes, CharUtil.getAjaxCharset());
+		String emailText = new String(emailTextBytes, CharUtil.getAjaxCharset());
 
 		//exist email Address
 		boolean isExistEmailAddress = false;
@@ -904,7 +1056,7 @@ class HttpRoutingMethodList {
 		}
 
 		byte[] usernameByte = requestMess.getRequestBodyDataByKey("username", false);
-		String updateUserName = new String(usernameByte, CharUtil.getCharset());
+		String updateUserName = new String(usernameByte, CharUtil.getAjaxCharset());
 
 		boolean result = UserDataLogic.updateUserName(updateUserName, userId);
 		if(result) {
@@ -950,16 +1102,25 @@ class HttpRoutingMethodList {
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getAnswerImgAndLinkData/*")
 	static ResponseMessage getAnswerImgAndLinkData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		boolean enabledGzipCompressed = acceptableGZIPcompressedBodyData(requestMess);
 		String requestPath = requestMess.getRequestPath();
 		int answerId = getIdFromRequestPath(requestPath, "/getAnswerImgAndLinkData/([0-9]+)");
 		if(answerId < 0) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "user id getting error from requestparameter", nowActiveMethod());
 		}
+		byte[] intextImgSizeBytes = requestMess.getRequestBodyDataByKey("intext_imgsize");
+		int intextImgSize = -1;
+		if(intextImgSizeBytes != null) {
+			intextImgSize = Integer.parseInt(new String(intextImgSizeBytes, CharUtil.getAjaxCharset()));
+		}
 		Map<String, Object> allRetData = new HashMap<>();
-		allRetData.putAll(AnswerDataLogic.getAnswerImageData(answerId));
+		allRetData.putAll(AnswerDataLogic.getAnswerImageData(answerId, intextImgSize));
 		allRetData.putAll(AnswerDataLogic.getAnswerLinkFileData(answerId));
 		byte[] bytes = createJsonData(allRetData);
-		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		if(enabledGzipCompressed) {
+			bytes = GZipUtil.compressed(bytes);
+		}
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol(), enabledGzipCompressed);
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/admin")
@@ -1031,14 +1192,63 @@ class HttpRoutingMethodList {
 		if(!adminFlg) {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Bad_Request, null, "basic relm failed", nowActiveMethod());
 		}
-		byte[] companyNameByte = requestMess.getRequestBodyDataByKey("companyName");
-		FileManager.getInstance().updateProperties("companyName", new String(companyNameByte, CharUtil.getCharset()));
+
+		Path path = Paths.get("conf/app.properties");
+		Properties prop = new Properties();
+		try(FileInputStream fis = new FileInputStream(path.toFile());
+			InputStreamReader isr = new InputStreamReader(fis)) {
+			prop.load(isr);
+		} catch(IOException e) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "properties file read error", nowActiveMethod());
+		}
+		for(Object key : prop.keySet().toArray()) {
+			String keyStr = (String)key;
+			byte[] bytesData = requestMess.getRequestBodyDataByKey(keyStr);
+			if(bytesData == null || bytesData.length == 0) {
+				continue;
+			}
+			FileManager.getInstance().updateProperties(keyStr, new String(bytesData, CharUtil.getAjaxCharset()));
+		}
 		boolean result = FileManager.getInstance().overwritePropertiesFile();
 		if(result) {
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.No_Content);
 		} else {
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/getQuestionImgRawData/*")
+	static ResponseMessage getQuestionImgRawData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		String requestPath = requestMess.getRequestPath();
+		int questionId = getIdFromRequestPath(requestPath, "/getQuestionImgRawData/([0-9]+)");
+
+		boolean enabledGzipCompressed = acceptableGZIPcompressedBodyData(requestMess);
+		Map<String, Object> retMap = QuestionDataLogic.getQutestionImgRawData(questionId);
+		String base64ContainsHeaderStr = (String)retMap.get("questionImageData");
+		ResponseContentType responseContents = createImgResponseContentsByBase64ImgHeader(base64ContainsHeaderStr);
+		String base64ImgBodyData = base64ContainsHeaderStr.split(",")[1].trim();
+		byte[] imgByteData = Base64.getDecoder().decode(base64ImgBodyData);
+		if(enabledGzipCompressed) {
+			imgByteData = GZipUtil.compressed(imgByteData);
+		}
+		return new ResponseMessageTypeGetFile(responseContents, imgByteData, requestMess.getHttpProtocol(), enabledGzipCompressed);
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/getAnswerImgRawData/*")
+	static ResponseMessage getAnswerImgRawData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		String requestPath = requestMess.getRequestPath();
+		int answerId = getIdFromRequestPath(requestPath, "/getAnswerImgRawData/([0-9]+)");
+
+		boolean enabledGzipCompressed = acceptableGZIPcompressedBodyData(requestMess);
+		Map<String, Object> retMap = AnswerDataLogic.getAnswerImageData(answerId);
+		String base64ContainsHeaderStr = (String)retMap.get("answerImgData");
+		ResponseContentType responseContents = createImgResponseContentsByBase64ImgHeader(base64ContainsHeaderStr);
+		String base64ImgBodyData = base64ContainsHeaderStr.split(",")[1].trim();
+		byte[] imgByteData = Base64.getDecoder().decode(base64ImgBodyData);
+		if(enabledGzipCompressed) {
+			imgByteData = GZipUtil.compressed(imgByteData);
+		}
+		return new ResponseMessageTypeGetFile(responseContents, imgByteData, requestMess.getHttpProtocol(), enabledGzipCompressed);
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/upgradeWebSocketConneting")
@@ -1059,6 +1269,7 @@ class HttpRoutingMethodList {
 		return new ResponseMessageTypeWebSocket(webSocketKey, requestMess.getHttpProtocol());
 	}
 
+	/* This is Test Code = tabaccoRoom */
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/tobaccoRoom")
 	static ResponseMessage tobaccoRoom(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
 		byte[] fileByteData = FileManager.getInstance().fileRead("html/tabaccoRoom.html");
@@ -1066,6 +1277,97 @@ class HttpRoutingMethodList {
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
 		}
 		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+	}
+
+	/* This is Test Code = mailtestpage */
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/mailtestpage")
+	static ResponseMessage mailtestpage(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/mailtestpage.html");
+		if(fileByteData == null) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
+		}
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+	}
+
+	/* This is Test Code = maittestpost */
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/maittestpost")
+	static ResponseMessage maittestpost(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		byte[] mailaddressBytes = requestMess.getRequestBodyDataByKey("mailaddress", false);
+		byte[] textBytes = requestMess.getRequestBodyDataByKey("text", false);
+
+		String mailaddress = new String(mailaddressBytes, CharUtil.getAjaxCharset());
+		String text = new String(textBytes, CharUtil.getAjaxCharset());
+
+		MailSendUtil mailSendUtil = new MailSendUtil();
+		boolean result = mailSendUtil.sendMail(mailaddress, text);
+
+		byte[] retData;
+		if(result) {
+			retData = "<h1>MailSendOK!!</h1>".getBytes();
+		} else {
+			retData = "<h1>MailSendNG...</h1>".getBytes();
+		}
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, retData, requestMess.getHttpProtocol());
+	}
+
+	/* This is Test Code = imgtestpage */
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/imgtestpage")
+	static ResponseMessage imgtestpage(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/imgfileTest.html");
+		if(fileByteData == null) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
+		}
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+	}
+
+	/* This is Test Code = imgtestpage */
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/imgtestpost")
+	static ResponseMessage imgtestpost(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		byte[] filenameBytes = requestMess.getRequestBodyDataByKey("text");
+		String filename = new String(filenameBytes, CharUtil.getAjaxCharset());
+		byte[] imgBytes = requestMess.getRequestBodyDataByKey("url");
+		String imgRawStr = new String(imgBytes, CharUtil.getAjaxCharset());
+		System.out.println(filename);
+		String[] imgRawStrLine = imgRawStr.split(",");
+		String tmpHead = imgRawStrLine[0];
+		String tmpBase64ImgData = imgRawStrLine[1];
+		byte[] decodeData = Base64.getDecoder().decode(tmpBase64ImgData);
+		Map<String, Object> retData = new HashMap<>();
+		try {
+			byte[] resizeData = ImageUtil.resizeSquare(decodeData, 200, ImageUtil.FileType.PNG);
+			String retBase64 = Base64.getEncoder().encodeToString(resizeData);
+			retData.put("resizeData", tmpHead + "," + retBase64);
+		} catch(IOException e) {
+			e.printStackTrace();
+			retData = new HashMap<>();
+		}
+		byte[] bytes = createJsonData(retData);
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/requestResizeDataImg")
+	static ResponseMessage requestResizeDataImg(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		byte[] imgBytes = requestMess.getRequestBodyDataByKey("imgData");
+		byte[] dataSizeBytes = requestMess.getRequestBodyDataByKey("dataSize");
+		String imgRawStr = new String(imgBytes, CharUtil.getAjaxCharset());
+		String dataSizeStr = new String(dataSizeBytes, CharUtil.getAjaxCharset());
+		int dataSize = Integer.parseInt(dataSizeStr);
+		String[] imgRawStrLine = imgRawStr.split(",");
+		String tmpHead = imgRawStrLine[0];
+		String tmpBase64ImgData = imgRawStrLine[1];
+		byte[] decodeData = Base64.getDecoder().decode(tmpBase64ImgData);
+		Map<String, Object> retData = new HashMap<>();
+		try {
+			byte[] resizeData = ImageUtil.resizeSquare(decodeData, dataSize, ImageUtil.getFileTypeFromImgHeader(tmpHead));
+			String retBase64 = Base64.getEncoder().encodeToString(resizeData);
+			retData.put("resizeData", tmpHead + "," + retBase64);
+		} catch(IOException e) {
+			e.printStackTrace();
+			retData = new HashMap<>();
+		}
+		byte[] bytes = createJsonData(retData);
+		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+		
 	}
 
 	private static byte[] createJsonData(Object obj) {
@@ -1163,5 +1465,16 @@ class HttpRoutingMethodList {
 			return false;
 		}
 		return true;
+	}
+
+	private static ResponseContentType createImgResponseContentsByBase64ImgHeader(String base64RawData) {
+		switch(ImageUtil.getFileTypeFromImgHeader(base64RawData.split(",")[0])) {
+		case PNG:
+			return ResponseContentType.PNG;
+		case JPEG:
+			return ResponseContentType.JPEG;
+		default:
+			return ResponseContentType.PNG;
+		}
 	}
 }

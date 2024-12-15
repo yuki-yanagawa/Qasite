@@ -1,5 +1,6 @@
 package qaservice.Common.dbaccesor;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,7 +13,9 @@ import java.util.Map;
 
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.dbaccesor.cashe.TimestampWrapCahse;
+import qaservice.Common.img.ImageUtil;
 import qaservice.Common.model.user.UserInfo;
+import qaservice.Common.utiltool.GZipUtil;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
 import qaservice.WebServer.logger.ServerLogger;
 
@@ -135,6 +138,32 @@ public class AnswerTableAccessor {
 		}
 	}
 
+	public static boolean insertAnswerTextData(Connection conn, int answerId, String answerData, int questionId, int userId) {
+
+		String sql = "INSERT INTO ANSWERTABLE (ANSWERID, QUESTIONID, ANSWER_DETAIL_DATA, USERID, ANSWERVALID, UPDATE_DATE)"
+				+ " VALUES(?, ?, ?, ?, ?, ?)";
+		try(PreparedStatement ps = conn.prepareStatement(sql)) {
+			int parameterIndex = 1;
+			ps.setInt(parameterIndex++, answerId);
+			ps.setInt(parameterIndex++, questionId);
+			ps.setString(parameterIndex++, answerData);
+			ps.setInt(parameterIndex++, userId);
+			ps.setBoolean(parameterIndex++, false);
+			ps.setTimestamp(parameterIndex++, new Timestamp(System.currentTimeMillis()));
+			int result = ps.executeUpdate();
+			if(result != 1) {
+				System.err.println("Insert Error");
+				return false;
+			}
+			return true;
+		} catch(SQLException e) {
+			System.err.println("Insert Error");
+			e.printStackTrace();
+//			ServerLogger.getInstance().warn(e, "Insert Error");
+			return false;
+		}
+	}
+
 	public static List<Map<String, Object>> getAnswerDetailData(Connection conn, int questionId, UserInfo userInfo) {
 		
 		Map<Integer, Map<String, List<Integer>>> actionMap = new HashMap<>(); 
@@ -185,8 +214,9 @@ public class AnswerTableAccessor {
 				Map<String, Object> innerMap = new HashMap<>();
 				int answerId = rs.getInt(1);
 				innerMap.put(AnswerTableColoumn.ANSWERID.clientCommonName, answerId);
-				innerMap.put(AnswerTableColoumn.ANSWER_DETAIL_DATA.clientCommonName,
-						new String(rs.getBytes(2), CharUtil.getCharset()));
+//				innerMap.put(AnswerTableColoumn.ANSWER_DETAIL_DATA.clientCommonName,
+//						new String(rs.getBytes(2), CharUtil.getCharset()));
+				innerMap.put(AnswerTableColoumn.ANSWER_DETAIL_DATA.clientCommonName, rs.getString(2));
 				innerMap.put(UserTableAccessor.UserTableColoumn.USERNAME.clientCommonName, rs.getString(3));
 				innerMap.put(AnswerTableColoumn.UPDATE_DATE.clientCommonName, rs.getString(4).split("\\.")[0]);
 				
@@ -413,7 +443,9 @@ public class AnswerTableAccessor {
 		return newCount;
 	}
 
-	public static boolean insertQuestionImgData(Connection conn, byte[] imgData, int answerId) {
+	public static boolean insertAnswerImgData(Connection conn, byte[] imgData, int answerId) {
+		//insert link file data compressed
+		imgData = compressedDataByGzip(imgData);
 		String sql = "INSERT INTO " + SUBTABLENAME_IMAGE + " (ANSWERID, ANSWER_IMAGEDATA) VALUES(?, ?)";
 		try(PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setInt(1, answerId);
@@ -504,7 +536,9 @@ public class AnswerTableAccessor {
 		return false;
 	}
 
-	public static boolean insertQuestionLinkData(Connection conn, int fileLinkId, byte[] filename, byte[] filedata, int answerId) {
+	public static boolean insertAnswerLinkData(Connection conn, int fileLinkId, byte[] filename, byte[] filedata, int answerId) {
+		//insert link file data compressed
+		filedata = compressedDataByGzip(filedata);
 		String sql = "INSERT INTO " + SUBTABLENAME_LINKFILE
 				+ " (ANSWERID, ANSWER_LINKFILEID, ANSWER_LINKFILENAME, ANSWER_LINKFILEDATA)"
 				+ " VALUES(?, ?, ? ,?)";
@@ -525,19 +559,27 @@ public class AnswerTableAccessor {
 		return false;
 	}
 
-	public static Map<String, Object> getAnswerImageData(Connection conn, int answerId) {
+	public static Map<String, Object> getAnswerImageData(Connection conn, int answerId, int imgResizeData) {
 		Map<String, Object> retMap = new HashMap<>();
 		String sql = "SELECT ANSWER_IMAGEDATA FROM " + SUBTABLENAME_IMAGE + " WHERE ANSWERID = ?";
 		try(PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setInt(1, answerId);
 			ResultSet rs = ps.executeQuery();
 			if(rs.next()) {
-				retMap.put("answerImgData", new String(rs.getBytes(1), CharUtil.getCharset()));
+				if(imgResizeData == -1) {
+					retMap.put("answerImgData", new String(decompressedDataByGzip(rs.getBytes(1)), CharUtil.getCharset()));
+				} else {
+					retMap.put("answerImgData", ImageUtil.reCreateBase64ImgData(decompressedDataByGzip(rs.getBytes(1)), imgResizeData));
+				}
 			}
 			return retMap;
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "getAnswerImageData error. data base connection");
 			System.err.println("getAnswerImageData error. data base connection");
+			e.printStackTrace();
+			return new HashMap<>();
+		} catch(IOException e) {
+			System.err.println("resizeAnswerImageData error. data base connection");
 			e.printStackTrace();
 			return new HashMap<>();
 		}
@@ -553,7 +595,7 @@ public class AnswerTableAccessor {
 			while(rs.next()) {
 				Map<String, Object> innerMap = new HashMap<>();
 				innerMap.put("linkFileName", new String(rs.getBytes(1), CharUtil.getCharset()));
-				innerMap.put("linkFileData", new String(rs.getBytes(2), CharUtil.getCharset()));
+				innerMap.put("linkFileData", new String(decompressedDataByGzip(rs.getBytes(2)), CharUtil.getCharset()));
 				retArrayList.add(innerMap);
 			}
 			retMap.put("answerLinkFile", retArrayList);
@@ -648,5 +690,28 @@ public class AnswerTableAccessor {
 			sb.append(c + ",");
 		}
 		return sb.substring(0, sb.length() - 1);
+	}
+
+	public static int getAnswerId(Connection conn, String username) {
+		int userId = UserTableAccessor.getUserIdByUserName(conn, username);
+		if(userId == -1) {
+			ServerLogger.getInstance().warn("AnswerTable Insert Error. user id get failed");
+			return -1;
+		}
+
+		int newId = getRegistNumber(conn);
+		if(newId == -1) {
+			ServerLogger.getInstance().warn("QuestionTable Insert Error");
+			return -1;
+		}
+		return newId;
+	}
+
+	private static byte[] compressedDataByGzip(byte[] rawData) {
+		return GZipUtil.compressed(rawData);
+	}
+
+	private static byte[] decompressedDataByGzip(byte[] compressedData) {
+		return GZipUtil.decompressed(compressedData);
 	}
 }

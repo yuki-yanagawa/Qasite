@@ -7,8 +7,15 @@ import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpRequestHandlingException;
 
 public class ResponseMessageTypeGetFile extends ResponseMessage {
+	private boolean isCompressedBodyData_;
 	public ResponseMessageTypeGetFile(ResponseContentType type, byte[] body, String httpProtocol) {
 		super(type, body, httpProtocol);
+		isCompressedBodyData_ = false;
+	}
+
+	public ResponseMessageTypeGetFile(ResponseContentType type, byte[] body, String httpProtocol, boolean compressed) {
+		super(type, body, httpProtocol);
+		isCompressedBodyData_ = compressed;
 	}
 
 	@Override
@@ -23,7 +30,7 @@ public class ResponseMessageTypeGetFile extends ResponseMessage {
 				.append(ResponseMessageCreateHelper.createHeaderDate())
 				.append(ResponseMessageCreateHelper.createHeaderContentType(type_))
 				.append(ResponseMessageCreateHelper.createHeaderContentLength(bodyLength));
-
+			if(isCompressedBodyData_) sb.append(ResponseMessageCreateHelper.createHeaderContentEncodingGzip());
 				byteArrayOutputStream.write(sb.toString().getBytes());
 				byteArrayOutputStream.write(ResponseMessageCreateHelper.RESPONSE_LINE_SEPARATOR.getBytes());
 				byteArrayOutputStream.write(body_);
