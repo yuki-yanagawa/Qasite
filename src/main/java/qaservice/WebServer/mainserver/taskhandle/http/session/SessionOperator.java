@@ -6,7 +6,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 
 public class SessionOperator {
 	private static class SessionTimeKeeperEachUser {
@@ -52,7 +52,7 @@ public class SessionOperator {
 			MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
 			data = sha256.digest(userName.getBytes());
 		} catch(NoSuchAlgorithmException ne) {
-			ServerLogger.getInstance().warn(ne, "create session id error");
+			QasiteLogger.warn("create session id error", ne);
 			data = userName.getBytes();
 		}
 		//double rondomData = Math.random();

@@ -25,6 +25,7 @@ import java.security.PublicKey;
 import java.util.Base64;
 import java.util.Iterator;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.DBServer.keys.exception.KeySettingException;
 import qaservice.DBServer.main.DBServerMainGuiStart;
@@ -51,7 +52,7 @@ public class KeysOperation {
 			try {
 				Files.createDirectories(dirPath);
 			} catch(IOException e) {
-				e.printStackTrace();
+				QasiteLogger.warn("new create key error.", e);
 				throw new KeySettingException(e.getMessage());
 			}
 		}
@@ -65,8 +66,6 @@ public class KeysOperation {
 			String privateKeyBase64 = Base64.getEncoder().encodeToString(privateKey.getEncoded());
 			PublicKey pubKey = keyPair.getPublic();
 			String pubKeyBase64 = Base64.getEncoder().encodeToString(pubKey.getEncoded());
-			//System.out.println(privateKeyBase64);
-			//System.out.println(pubKeyBase64);
 			Path privPath = Paths.get(KEY_DIR_PATH + File.separator + PRIVATE_KEY);
 			if(!Files.exists(privPath)) {
 				Files.createFile(privPath);
@@ -87,11 +86,9 @@ public class KeysOperation {
 			filepub.flush();
 			filepub.close();
 		} catch(NoSuchAlgorithmException e) {
-			//e.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			throw new KeySettingException(e.getMessage());
 		} catch(IOException ie) {
-			//ie.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(ie.getMessage());
 			throw new KeySettingException(ie.getMessage());
 		}
@@ -103,7 +100,6 @@ public class KeysOperation {
 			try {
 				Files.createDirectories(dirPath);
 			} catch(IOException e) {
-				//e.printStackTrace();
 				DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 				throw new KeySettingException(e.getMessage());
 			}
@@ -146,15 +142,12 @@ public class KeysOperation {
 			KeyFactory keyFactory = KeyFactory.getInstance(algorithm, provider);
 			return keyFactory.generatePublic(publicKeySpec);
 		} catch(IOException e) {
-			//e.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			return null;
 		} catch(NoSuchAlgorithmException e) {
-			//e.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			return null;
 		} catch(InvalidKeySpecException e) {
-			//e.printStackTrace();
 			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 			return null;
 		}
@@ -216,11 +209,11 @@ public class KeysOperation {
 			signature.update(checkData);
 			return signature.verify(signData);
 		} catch(NoSuchAlgorithmException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("verify error.", e);
 		} catch(InvalidKeyException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("verify error.", e);
 		} catch(SignatureException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("verify error.", e);
 		}
 		return false;
 	}

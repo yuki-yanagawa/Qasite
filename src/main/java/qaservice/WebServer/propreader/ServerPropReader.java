@@ -7,20 +7,25 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 
 public class ServerPropReader {
 	private static final String SERVER_PROPERTIES_FILE = "conf/server.properties";
 	
 	private static Properties props_;
+	private static final boolean resultReadProperites;
 	static {
-		readPropertiesFile();
+		resultReadProperites = readPropertiesFile();
 	}
-	
+
+	public static boolean isReadPropertiesSuccess() {
+		return resultReadProperites;
+	}
+
 	public static Object getProperties(String key) {
 		Object value = props_.get(key);
 		if(value == null) {
-			
+			QasiteLogger.info("server.properties key is not exisit =" + key);
 		}
 		return value;
 	}
@@ -32,7 +37,7 @@ public class ServerPropReader {
 			InputStreamReader isr = new InputStreamReader(fis)){
 			props_.load(isr);
 		} catch(IOException e) {
-			ServerLogger.getInstance().warn("read properties error");
+			//ServerLogger.getInstance().warn("read properties error");
 			return false;
 		}
 		return true;

@@ -2,7 +2,7 @@ package qaservice.WebServer.mainserver;
 
 import java.io.IOException;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.mainserver.worker.HttpHandlerWorkerOperation;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
@@ -12,7 +12,17 @@ public class ServerOperator {
 	private static int WORKER_THREAD_COUNT = 5;
 	private static String serverName_;
 	public static boolean mainServerStart(int port) {
+		if(!ServerPropReader.isReadPropertiesSuccess()) {
+			System.out.println("properties read error. system exit.");
+			System.exit(-1);
+		}
 		serverName_ = ServerPropReader.getProperties(ServerPropKey.ServerName.getKey()).toString();
+//		try {
+//			QasiteLogger.startLogger(serverName_);
+//		} catch(Exception e) {
+//			e.printStackTrace();
+//			return false;
+//		}
 		WORKER_THREAD_COUNT = Integer.parseInt(ServerPropReader.getProperties(ServerPropKey.ServerWorkerThreadCount.getKey()).toString());
 		HttpHandlerWorkerOperation.createWorkerThreadPool(WORKER_THREAD_COUNT);
 		boolean isTlsMode = Boolean.parseBoolean(ServerPropReader.getProperties(ServerPropKey.ServerTLS.getKey()).toString());
@@ -24,18 +34,17 @@ public class ServerOperator {
 			}
 			HttpHandlerWorkerOperation.registerAwaitReciverSocket(httpServer_);
 		} catch(IOException e) {
-			ServerLogger.getInstance().warn("http server setting error..");
-			ServerLogger.getInstance().warn(e.getMessage());
+			QasiteLogger.warn("main server Start error", e);
 			return false;
 		} catch(Exception e) {
-			ServerLogger.getInstance().warn("http server setting error..");
-			ServerLogger.getInstance().warn(e.getMessage());
+			QasiteLogger.warn("main server Start error", e);
 			return false;
 		}
 		return true;
 	}
 
 	public static void mainServerStop() {
+		QasiteLogger.endLogger();
 		HttpHandlerWorkerOperation.deleteWorkerThreadPool();
 		httpServer_.killServer();
 	}

@@ -3,7 +3,7 @@ package qaservice.WebServer.mainserver.taskhandle.http.response;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpRequestHandlingException;
 
 public class ResponseMessageTypeNoBodyData extends ResponseMessage{
@@ -27,7 +27,7 @@ public class ResponseMessageTypeNoBodyData extends ResponseMessage{
 				sb.append(ResponseMessageCreateHelper.END_CODE);
 			byteArrayOutputStream.write(sb.toString().getBytes()); 
 		} catch (IOException e) {
-			ServerLogger.getInstance().warn(e, "create response message error type method put");
+			QasiteLogger.warn("create response message error type method put", e);
 			throw new HttpRequestHandlingException("create response message error");
 		}
 		return byteArrayOutputStream.toByteArray();

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.socketutil.WrapperSocket;
 
 public class WebSocketManager {
@@ -38,7 +39,7 @@ public class WebSocketManager {
 				try {
 					w.sendMessage(sendData);
 				} catch(IOException e) {
-					System.err.println(w.currentThread().getName() + " : send message error");
+					QasiteLogger.warn(w.currentThread().getName() + " : send message error", e);
 				}
 			}
 		}

@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.DBServer.util.DBServerPropReader;
 
 public class DBServerConsoleStart {
@@ -15,7 +16,7 @@ public class DBServerConsoleStart {
 			settingConsoleOut();
 			new DBServerMain().main(new String[]{"fromConsole"});
 		} catch(Exception exeception) {
-			exeception.printStackTrace();
+			QasiteLogger.warn("DB start error", exeception);
 		}
 	}
 

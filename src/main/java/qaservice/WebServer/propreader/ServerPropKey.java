@@ -17,7 +17,8 @@ public enum ServerPropKey {
 	WithDBServerStart("withDBServerStart"),
 	ConnectionPoolCount("connectionPoolCount"),
 	DBServerConnetionPath("dbconnetionPath"),
-	ConsoleOut("consoleOut");
+	ConsoleOut("consoleOut"),
+	AccessControlAllowOrigin("accessAllowControlOrigin");
 	
 	
 	private ServerPropKey(String key) {

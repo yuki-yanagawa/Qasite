@@ -13,6 +13,8 @@ import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import qaservice.Common.Logger.QasiteLogger;
+
 public class MailSendUtil {
 	private static Properties prop_ = new Properties();
 
@@ -41,7 +43,7 @@ public class MailSendUtil {
 			message.setText(text);
 			Transport.send(message);
 		} catch(MessagingException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("sendMail error usernam =" + username + " : password=" + password + " / sendMailAddr=" + sendMailAddress ,e);
 			return false;
 		}
 		return true;
@@ -51,7 +53,7 @@ public class MailSendUtil {
 		try {
 			prop_.load(new FileReader("conf/mail.properties"));
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("Load MailProperite Error", e);
 			prop_.clear();
 		}
 	}

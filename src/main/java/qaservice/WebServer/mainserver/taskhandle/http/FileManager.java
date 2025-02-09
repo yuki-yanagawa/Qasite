@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
 
 public class FileManager {
@@ -64,19 +65,19 @@ public class FileManager {
 			InputStreamReader isr = new InputStreamReader(fis)) {
 			prop_.load(isr);
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("refresh error.", e);
 		}
 		writeGolbalDefnitionJs();
 	}
 
-	public void updateProperties(String key, String value) {
+	public synchronized void updateProperties(String key, String value) {
 		if(prop_ == null) {
 			return;
 		}
 		prop_.put(key, value);
 	}
 
-	public boolean overwritePropertiesFile() {
+	public synchronized boolean overwritePropertiesFile() {
 		if(prop_ == null) {
 			return false;
 		}
@@ -89,7 +90,7 @@ public class FileManager {
 			}
 			osw.flush();
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("overrite properite file error.", e);
 			return false;
 		}
 		htmlFileSettingCash();
@@ -109,7 +110,7 @@ public class FileManager {
 				byte[] replaceFD = replaceFileByteData(fileByteData);
 				setCashReqdingFileData(filePath, replaceFD);
 			} catch(IOException e) {
-				e.printStackTrace();
+				QasiteLogger.warn("htmlFileSettingCash error", e);
 			}
 		}
 	}
@@ -122,7 +123,7 @@ public class FileManager {
 			fis.read(fileByteData);
 			setCashReqdingFileData(GLOBAL_VALIABLE_JS, fileByteData);
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("globalJsSettingCash error.", e);
 		}
 	}
 
@@ -134,7 +135,7 @@ public class FileManager {
 			companyNameURLDecode = URLDecoder.decode((String)prop_.getProperty("companyName"), CharUtil.getCharset().toString());
 			siteNameURLDecode = URLDecoder.decode((String)prop_.getProperty("siteName"), CharUtil.getCharset().toString());
 		}catch(UnsupportedEncodingException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("replace file name. error", e);
 		}
 		String replaceStr = tmp.replaceAll("\\(@companyName\\)", companyNameURLDecode);
 		replaceStr = replaceStr.replaceAll("\\(@siteName\\)", siteNameURLDecode);
@@ -146,7 +147,7 @@ public class FileManager {
 			FileTime fileTime = Files.getLastModifiedTime(Paths.get(filePath));
 			fileReadCashe_.put(filePath, new FileCasheHolder(readData, fileTime));
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("setCashReqdingFileData error", e);
 		}
 	}
 
@@ -185,7 +186,7 @@ public class FileManager {
 				return fileCasheHolder.getFileData();
 			}
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("getFileDataFromCashe error", e);
 		}
 		return null;
 	}
@@ -199,6 +200,8 @@ public class FileManager {
 		try(FileOutputStream fos = new FileOutputStream(path.toFile());
 			OutputStreamWriter osw = new OutputStreamWriter(fos)) {
 			osw.write("var categoRizeObj = new Object();" + separator);
+			osw.write("var relationSiteObj = new Object();" + separator);
+			osw.write("var NameRelationSiteObj = new Object();" + separator);
 			for(Entry<Object, Object> entry : prop_.entrySet()) {
 				String key = entry.getKey().toString();
 				Object value = entry.getValue();
@@ -208,18 +211,30 @@ public class FileManager {
 				if(key.matches("^categoRize.*")) {
 					osw.write("categoRizeObj[\'" + entry.getKey() + "\'] = window.decodeURI(\'" + entry.getValue() + "\');" + separator);
 				}
+				if(key.matches("^relationSite.*")) {
+					osw.write("relationSiteObj[\'" + entry.getKey() + "\'] = window.decodeURI(\'" + entry.getValue() + "\');" + separator);
+				}
+				if(key.matches("^NameRelationSite.*")) {
+					osw.write("NameRelationSiteObj[\'" + entry.getKey() + "\'] = window.decodeURI(\'" + entry.getValue() + "\');" + separator);
+				}
 				if("cmdLineAddStr".equals(key)) {
 					osw.write("var cmdLineAddStr = window.decodeURI(\'" + entry.getValue() + "\');" + separator);
 				}
 			}
 			osw.flush();
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("writeGolbalDefnitionJs", e);
 		}
 	}
 
 	private boolean isOverriteData(String key, Object value) {
 		if(key.matches("^categoRize.*") && !"".equals(value)) {
+			return true;
+		}
+		if(key.matches("^relationSite.*") && !"".equals(value)) {
+			return true;
+		}
+		if(key.matches("^NameRelationSite.*") && !"".equals(value)) {
 			return true;
 		}
 		if("cmdLineAddStr".equals(key)) {

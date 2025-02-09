@@ -1,8 +1,11 @@
-package qaservice.WebServer.accessDBServer;
+package qaservice.WebServer.model.accessDBServer;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.dbaccesor.UserTableAccessor;
 import qaservice.Common.model.user.UserInfo;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
@@ -116,5 +119,61 @@ public class UserDataLogic {
 		} finally {
 			dbConnOpe.endUsedConnctionNotify(conn);
 		}
+	}
+
+	public static boolean spUpdateUserPicture(int userId, byte[] userPictureData) {
+		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
+		Connection conn = dbConnOpe.getConnetion();
+		String spCall = "CALL SP_UPDATE_USER_PICTUREDATA(?, ?)";
+		boolean retResult = false;
+		try (PreparedStatement ps = conn.prepareStatement(spCall)) {
+			ps.setInt(1, userId);
+			ps.setBytes(2, userPictureData);
+			retResult = ps.execute();
+		} catch(SQLException e) {
+			QasiteLogger.warn("spUpdateUser Failed.", e);
+			retResult = false;
+		} finally {
+			dbConnOpe.endUsedConnctionNotify(conn);
+		}
+		return retResult;
+	}
+
+	public static boolean spUpdateUserIntroduction(int userId, byte[] introduction) {
+		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
+		Connection conn = dbConnOpe.getConnetion();
+		String spCall = "CALL SP_UPDATE_USER_INTRODUCTION(?, ?)";
+		boolean retResult = false;
+		try (PreparedStatement ps = conn.prepareStatement(spCall)) {
+			ps.setInt(1, userId);
+			ps.setBytes(2, introduction);
+			retResult = ps.execute();
+		} catch(SQLException e) {
+			QasiteLogger.warn("spUpdateUser Failed.", e);
+			retResult = false;
+		} finally {
+			dbConnOpe.endUsedConnctionNotify(conn);
+		}
+		return retResult;
+	}
+
+	public static byte[] spGetUserPictureData(int userId) {
+		DBConnectionOperation dbConnOpe = DBConnectionOperation.getInstance();
+		Connection conn = dbConnOpe.getConnetion();
+		String spCall = "CALL SP_GET_USER_PICTUREDATA(?)";
+		ResultSet retResult;
+		try (PreparedStatement ps = conn.prepareStatement(spCall)) {
+			ps.setInt(1, userId);
+			retResult = ps.executeQuery();
+			if(retResult.next()) {
+				return retResult.getBytes(1);
+			}
+		} catch(SQLException e) {
+			QasiteLogger.warn("spUpdateUser Failed.", e);
+			return new byte[0];
+		} finally {
+			dbConnOpe.endUsedConnctionNotify(conn);
+		}
+		return new byte[0];
 	}
 }

@@ -4,15 +4,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.SocketTimeoutException;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.mainserver.taskhandle.http.request.RequestMessage;
 import qaservice.WebServer.mainserver.taskhandle.http.request.RequsetHeaderType;
 import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpNotPageException;
 import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpRequestHandlingException;
-import qaservice.WebServer.mainserver.taskhandle.http.response.ResonseStatusLine;
 import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessage;
-import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageCreateHelper;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
@@ -27,7 +26,7 @@ public class HttpTaskHandle {
 			readTimeOut = Long.parseLong(ServerPropReader.getProperties(ServerPropKey.ReadTimeOut.getKey()).toString());
 			readTimeOut *= 1000;
 		} catch(NumberFormatException e) {
-			ServerLogger.getInstance().warn(e, "read buffer size error from server properties");
+			QasiteLogger.warn("read buffer size error from server properties", e);
 			buffSize = 1024;
 			readTimeOut = 50 * 1000;
 		}
@@ -79,9 +78,19 @@ public class HttpTaskHandle {
 		byte[] buffer;
 		while(true) {
 			buffer = new byte[BUFFER_SIZE];
-			readSize = is.read(buffer);
+			try {
+				readSize = is.read(buffer);
+			} catch(Exception e) {
+				if(e instanceof SocketTimeoutException) {
+					if(readSize == 0) {
+						throw e;
+					} else {
+						throw new IOException("interrput read data");
+					}
+				}
+			}
 			currentBufSize += readSize;
-			ServerLogger.getInstance().info("read data size: " + readSize);
+			QasiteLogger.info("read data size: " + readSize + " thread name = " + Thread.currentThread().getName());
 			if(readSize <= 0) {
 				if(currentBufSize == 0) {
 					throw new IOException("http task handle = read Error");

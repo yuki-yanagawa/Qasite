@@ -4,13 +4,16 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import qaservice.Common.Logger.QasiteLogger;
+import qaservice.DBServer.database.DBConnectModel;
 import qaservice.DBServer.database.rankCashe.RankCashe;
 import qaservice.DBServer.util.DBServerPropReader;
 
 public class RankCheckWorker extends Thread {
-	private Connection conn_;
-	public RankCheckWorker() throws SQLException {
-		connectDB();
+	private final Connection conn_;
+	//private final DBConnectModel dbConnectModel_;
+	public RankCheckWorker(DBConnectModel dbConnectModel) throws SQLException {
+		conn_ = connectDB(dbConnectModel);
 	}
 
 	@Override
@@ -18,11 +21,10 @@ public class RankCheckWorker extends Thread {
 		int intervalTime = Integer.parseInt(DBServerPropReader.getProperties("rankUpdateInterval").toString());
 		while(true) {
 			try {
-				connectDB();
 				RankCashe.updateRankCashe(conn_);
 				intervalWait(intervalTime);
 			} catch(Throwable e) {
-				e.printStackTrace();
+				QasiteLogger.warn("Rank cashe update error.", e);
 				connectionClose();
 			}
 		}
@@ -36,11 +38,15 @@ public class RankCheckWorker extends Thread {
 		}
 	}
 
-	private void connectDB() throws SQLException {
+	private Connection connectDB(DBConnectModel dbConnectModel) throws SQLException {
 		if(conn_ != null) {
-			return;
+			return conn_;
 		}
-		conn_ =  DriverManager.getConnection("jdbc:h2:tcp://localhost:9092/./databases/datasheed.db;MODE=MYSQL;", "sa", "");
+		if(dbConnectModel == null) { 
+			return DriverManager.getConnection("jdbc:h2:tcp://localhost:9092/./databases/datasheed.db;MODE=MYSQL;", "sa", "");
+		} else {
+			return DriverManager.getConnection(dbConnectModel.getConnectPath(), dbConnectModel.getName(), dbConnectModel.getPass());
+		}
 	}
 	private void connectionClose() {
 		try {

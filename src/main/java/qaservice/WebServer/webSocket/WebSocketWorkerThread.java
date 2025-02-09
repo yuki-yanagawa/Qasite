@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketTimeoutException;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.socketutil.WrapperSocket;
 
@@ -54,7 +55,7 @@ public class WebSocketWorkerThread extends Thread {
 		try {
 			wrapperSocket_.close();
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("freeWrapperSocket", e);
 		}
 	}
 
@@ -82,17 +83,17 @@ public class WebSocketWorkerThread extends Thread {
 		try {
 			byte[] recvData = WebSocketMessageUtil.messageDecoder(dis);
 			if(recvData == null) {
-				System.err.println("recv data null...");
+				QasiteLogger.warn("recv data null...");
 			} else {
 				WebSocketManager.notifyCathedData(recvData, this.currentThread().getName());
 			}
 			return true;
 		} catch(IOException e) {
 			if(e instanceof SocketTimeoutException) {
-				System.out.println("socket time out..");
+				QasiteLogger.info("socket time out..");
 				return true;
 			}
-			e.printStackTrace();
+			QasiteLogger.warn("readData", e);
 			return false;
 		}
 	}

@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.DBServer.util.DBServerPropReader;
 
 public class DBConnetionManager {
@@ -42,7 +43,7 @@ public class DBConnetionManager {
 				dbConnectionPool_.put(con, false);
 			}
 		} catch(SQLException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("create db connection error", e);
 		}
 	}
 	
@@ -59,7 +60,7 @@ public class DBConnetionManager {
 				dbConnectionPool_.clear();
 			}
 		} catch(SQLException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("connection pool close error", e);
 		}
 	}
 

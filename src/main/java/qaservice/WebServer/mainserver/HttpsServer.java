@@ -3,7 +3,6 @@ package qaservice.WebServer.mainserver;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.KeyStore;
 
@@ -11,7 +10,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
@@ -59,7 +58,7 @@ public class HttpsServer implements IServer {
 			try {
 				svrSock_.close();
 			} catch(IOException e) {
-				ServerLogger.getInstance().warn(e, "ServerSocket close operatione error");
+				QasiteLogger.warn("ServerSocket close operatione error", e);
 			}
 		}
 	}

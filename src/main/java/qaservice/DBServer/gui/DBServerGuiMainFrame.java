@@ -24,6 +24,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.Timer;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.DBServer.keys.KeysOperation;
 import qaservice.DBServer.main.DBServerMain;
 import qaservice.DBServer.util.DBServerPropReader;
@@ -142,7 +143,7 @@ public class DBServerGuiMainFrame  extends JFrame implements ActionListener {
 				try {
 					new DBServerMain().main(null);
 				} catch(Exception exeception) {
-					exeception.printStackTrace();
+					QasiteLogger.warn("DB main start Error.", exeception);
 					stopServerState();
 					startButton_.setEnabled(true);
 					break;

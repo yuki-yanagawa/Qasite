@@ -6,8 +6,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
-import qaservice.WebServer.logger.ServerLogger;
 
 class RequestBody {
 	private static enum BodyType {
@@ -70,7 +70,7 @@ class RequestBody {
 		}
 		String[] tmpLine = casheBodyData_.split(key + '=');
 		if(tmpLine.length != 2) {
-			ServerLogger.getInstance().warn("get value error key="+key);
+			QasiteLogger.warn("get value error key="+key);
 			return null;
 		}
 		int endIndex = tmpLine[1].indexOf('&');
@@ -85,10 +85,9 @@ class RequestBody {
 			base64EncodeData = URLDecoder.decode(urlEncodeData, CharUtil.getCharset().toString());
 			retByteData = Base64.getDecoder().decode(base64EncodeData);
 		} catch(UnsupportedEncodingException e) {
-			ServerLogger.getInstance().warn(e, "Decoder Exception");
+			QasiteLogger.warn("Base64 Decoder Exception", e);
 			return null;
 		}
-		//System.out.println("key = " + key + " & value=" + new String(retByteData));
 		casheValueMap_.put(key, retByteData);
 		return retByteData;
 	}
@@ -107,7 +106,7 @@ class RequestBody {
 		}
 		String[] tmpLine = casheBodyData_.split(key + '=');
 		if(tmpLine.length != 2) {
-			ServerLogger.getInstance().info("donot get value error key="+key);
+			QasiteLogger.info("donot get value error key="+key, true);
 			return null;
 		}
 		int endIndex = tmpLine[1].indexOf('&');
@@ -125,10 +124,9 @@ class RequestBody {
 				retByteData = URLDecoder.decode(urlEncodeData, CharUtil.getCharset().toString()).getBytes();
 			}
 		} catch(UnsupportedEncodingException e) {
-			ServerLogger.getInstance().warn(e, "Decoder Exception");
+			QasiteLogger.warn("Base64 Decoder Exception", e);
 			return null;
 		}
-		//System.out.println("key = " + key + " & value=" + new String(retByteData));
 		casheValueMap_.put(key, retByteData);
 		return retByteData;
 	}

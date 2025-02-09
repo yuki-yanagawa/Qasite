@@ -3,6 +3,7 @@ package qaservice.WebServer.mainserver.taskhandle.http.response;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.dateutil.ServerDateUtil;
 import qaservice.WebServer.mainserver.ServerOperator;
 import qaservice.WebServer.propreader.ServerPropKey;
@@ -13,9 +14,11 @@ public class ResponseMessageCreateHelper {
 	static final String END_CODE = "\r\n\r\n";
 	static final String KEEPALIVE_TIME;
 	static final String KEEPALIVE_MAX_RESOURCE;
+	static final String ACCESS_CONTROL_ALLOW_ORIGIN;
 	static {
 		KEEPALIVE_TIME = ServerPropReader.getProperties(ServerPropKey.KeepAliveTimeOut.getKey()).toString();
 		KEEPALIVE_MAX_RESOURCE = ServerPropReader.getProperties(ServerPropKey.KeepAliveMaxResource.getKey()).toString();
+		ACCESS_CONTROL_ALLOW_ORIGIN = ServerPropReader.getProperties(ServerPropKey.AccessControlAllowOrigin.getKey()).toString();;
 	}
 	public static byte[] createResponseMessage(ResonseStatusLine statusLine, String httpPlotocol) {
 		return createResponseMessage(statusLine, httpPlotocol, null);
@@ -29,7 +32,7 @@ public class ResponseMessageCreateHelper {
 //			byteArrayOutputStream.write(responseBody);
 //			byteArrayOutputStream.write(END_CODE.getBytes());
 //		} catch(IOException e) {
-//			e.printStackTrace();
+//	
 //			return null;
 //		}
 //		return byteArrayOutputStream.toByteArray();
@@ -49,7 +52,7 @@ public class ResponseMessageCreateHelper {
 			}
 			byteArrayOutputStream.write(END_CODE.getBytes());
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("createResponseMessage error.", e);
 			return null;
 		}
 		return byteArrayOutputStream.toByteArray();
@@ -146,5 +149,9 @@ public class ResponseMessageCreateHelper {
 
 	static String createUpgrade(String upgrade) {
 		return "Upgrade: " + upgrade + RESPONSE_LINE_SEPARATOR;
+	}
+
+	static String createAccessControllAllowOrigin() {
+		return "Access-Control-Allow-Origin: " + ACCESS_CONTROL_ALLOW_ORIGIN + RESPONSE_LINE_SEPARATOR;
 	}
 }

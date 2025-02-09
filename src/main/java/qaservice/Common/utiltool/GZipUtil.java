@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import qaservice.Common.Logger.QasiteLogger;
+
 public class GZipUtil {
 	public static byte[] compressed(byte[] data) {
 		try(ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -15,7 +17,7 @@ public class GZipUtil {
 			gos.close();
 			return bos.toByteArray();
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("compressed Error.", e);
 		}
 		return null;
 	}
@@ -31,7 +33,7 @@ public class GZipUtil {
 			}
 			return byteArrayOut.toByteArray();
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("decompressed error", e);
 		}
 		return null;
 	}

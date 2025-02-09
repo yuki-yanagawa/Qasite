@@ -8,8 +8,9 @@ import java.net.SocketTimeoutException;
 
 import javax.net.ssl.SSLSocket;
 
+import qaservice.Common.Logger.QasiteLogger;
+import qaservice.Common.debug.DebugChecker;
 import qaservice.Common.socketutil.WrapperSocket;
-import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.mainserver.IServer;
 import qaservice.WebServer.mainserver.taskhandle.http.HttpTaskHandle;
 import qaservice.WebServer.mainserver.taskhandle.http.request.RequestMessage;
@@ -52,7 +53,6 @@ class HttpHandlerWorker extends Thread {
 			if(server_ == null) {
 				try {
 					synchronized (this) {
-						//System.out.println("Wait Mode!!! : " + Thread.currentThread().getName());
 						this.wait();
 					}
 				} catch(InterruptedException e) {
@@ -62,10 +62,9 @@ class HttpHandlerWorker extends Thread {
 			}
 			if(server_ == null || !polling_) {
 				state_ = WorkerStates.FAILED;
-				ServerLogger.getInstance().warn("Http thread Worker Failed register serverSocket : Thread=" + Thread.currentThread().getName());
+				QasiteLogger.warn("Http thread Worker Failed register serverSocket : Thread=" + getThreadName());
 				return;
 			}
-			//System.out.println("Executing Mode!!! : " + Thread.currentThread().getName());
 			if(state_ != WorkerStates.EXECUTING) {
 				setStatusExecuting();
 			}
@@ -73,6 +72,12 @@ class HttpHandlerWorker extends Thread {
 			//try(Socket clientSocket = server_.awaitRequest();){
 			try {
 				Socket clientSocket = server_.awaitRequest();
+				//DEBUG Mode
+				if(DebugChecker.isDEBUGMode()) {
+					QasiteLogger.debug("connect socket / addr = " + clientSocket.getInetAddress().getHostAddress() + " port = " + clientSocket.getPort() + 
+							" Thread = " + getThreadName(),
+							DebugChecker.DEBUG_SOCKET_CONNECTION);
+				}
 				changeLeaderResult = HttpHandlerWorkerOperation.promptLeaderThread();
 				if(changeLeaderResult) {
 					//HttpTaskHandle.httpHandleThread(clientSocket);
@@ -81,11 +86,14 @@ class HttpHandlerWorker extends Thread {
 					httpRequestHandle(clientSocket);
 				} else {
 					//Handle Full Task Response
-					System.err.println("promptthread failed");
+					QasiteLogger.warn("svrSocket accept step failed");
 				}
 			} catch(Throwable e) {
-				//e.printStackTrace();
-				ServerLogger.getInstance().warn(e, "svrSocket accept step failed");
+				if(e instanceof SocketTimeoutException) {
+					QasiteLogger.info("SocketTimeout : Thread=" + getThreadName());
+				} else {
+					QasiteLogger.warn("svrSocket accept step failed : Thread=" + getThreadName(), e);
+				}
 			}
 			releaseAcceptTask();
 //			if(changeLeaderResult) {
@@ -111,13 +119,17 @@ class HttpHandlerWorker extends Thread {
 			try {
 				requestMessage = HttpTaskHandle.analizeRequestMessage(is, os);
 			} catch(HttpRequestHandlingException he) {
+				QasiteLogger.warn("HttpRequestHandlingException : Thread=" + getThreadName(), he);
 				//HTTP 500
 				os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
 				os.flush();
 				return;
+			} catch(SocketTimeoutException e) {
+				QasiteLogger.info("socket time out exeption. Thread name = : " + getThreadName(), true);
+				return;
 			}
 			if(requestMessage == null) {
-				System.err.println("analizeRequestMessage failed");
+				QasiteLogger.warn("analizeRequestMessage failed");
 				return;
 			}
 			boolean isKeepAlive = false;
@@ -129,20 +141,20 @@ class HttpHandlerWorker extends Thread {
 			try {
 				responseMessage = HttpTaskHandle.createResponseMessage(requestMessage);
 			} catch(HttpRequestHandlingException he) {
-				he.printStackTrace();
+				QasiteLogger.warn("HttpRequestHandlingException : Thread=" + getThreadName(), he);
 				//HTTP 500
 				os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
 				os.flush();
 				return;
 			} catch(HttpNotPageException ne) {
-				ne.printStackTrace();
+				QasiteLogger.warn("HttpNotPageException exeption.", ne);
 				//HTTP 404
 				os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Not_Found, "HTTP/1.1", ne.getMessage()));
 				os.flush();
 				return;
 			}
 			if(responseMessage == null) {
-				System.err.println("createResponse failed");
+				QasiteLogger.warn("createResponse failed");
 				return;
 			}
 			os.write(responseMessage.createResponseMessage(isKeepAlive));
@@ -160,18 +172,23 @@ class HttpHandlerWorker extends Thread {
 				try {
 					requestMessageKeep = HttpTaskHandle.analizeRequestMessage(is, os);
 				} catch(HttpRequestHandlingException he) {
+					QasiteLogger.warn("HttpRequestHandlingException : Thread=" + getThreadName(), he);
 					//HTTP 500
 					os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
 					os.flush();
 					return;
 				}
 				if(requestMessageKeep == null) {
+					if(!isWebSocketConnet) {
+						QasiteLogger.info("KILL KEEP ALIVE thread = " + getThreadName());
+						break;
+					}
 					//check connected
 					try { 
 						os.write("".getBytes());
 						os.flush();
 					} catch(SocketTimeoutException e) {
-						e.printStackTrace();
+						QasiteLogger.info("SocketTimeout : Thread=" + getThreadName());
 						return;
 					}
 					isPeek = HttpHandlerWorkerOperation.isPeekExetuingThread();
@@ -185,20 +202,20 @@ class HttpHandlerWorker extends Thread {
 				try {
 					responseMessageKeepAlive = HttpTaskHandle.createResponseMessage(requestMessageKeep);
 				} catch(HttpRequestHandlingException he) {
-					he.printStackTrace();
+					QasiteLogger.warn("HttpRequestHandlingException : Thread=" + getThreadName(), he);
 					//HTTP 500
 					os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Internal_Server_Error, "HTTP/1.1", he.getMessage()));
 					os.flush();
 					return;
 				} catch(HttpNotPageException ne) {
-					ne.printStackTrace();
+					QasiteLogger.warn("HttpNotPageException", ne);
 					//HTTP 404
 					os.write(ResponseMessageCreateHelper.createResponseMessage(ResonseStatusLine.Not_Found, "HTTP/1.1", ne.getMessage()));
 					os.flush();
 					return;
 				}
 				if(responseMessageKeepAlive == null) {
-					System.err.println("createResponse failed");
+					QasiteLogger.warn("createResponse failed");
 					return;
 				}
 				os.write(responseMessageKeepAlive.createResponseMessage(isKeepAlive));
@@ -211,14 +228,9 @@ class HttpHandlerWorker extends Thread {
 				}
 			}
 		} catch(IOException e) {
-			e.printStackTrace();
-//			String[] data = ((SSLSocket)socket).getSupportedCipherSuites();
-//			for(String d : data) {
-//				System.out.println(d);
-//			}
-			
+			QasiteLogger.warn("IOException. ThreadName = " + getThreadName(), e);
 		} catch(Exception e) {
-			e.printStackTrace();
+			QasiteLogger.warn("Exception. ThreadName = " + getThreadName(), e);
 		}
 	}
 
@@ -250,6 +262,10 @@ class HttpHandlerWorker extends Thread {
 		synchronized (this) {
 			this.notify();
 		}
+		//DEBUG Mode
+		if(DebugChecker.isDEBUGMode()) {
+			QasiteLogger.debug("worker thread = " + getThreadName() + " setting serverSocket.", DebugChecker.DEBUG_WORKER_THREAD);
+		}
 	}
 	
 	String getThreadName() {
@@ -263,7 +279,7 @@ class HttpHandlerWorker extends Thread {
 		try {
 			clientSocket.close();
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("closeClientSocket", e);
 		}
 	}
 

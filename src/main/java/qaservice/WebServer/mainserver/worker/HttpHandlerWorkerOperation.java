@@ -3,6 +3,8 @@ package qaservice.WebServer.mainserver.worker;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import qaservice.Common.Logger.QasiteLogger;
+import qaservice.Common.debug.DebugChecker;
 import qaservice.WebServer.mainserver.IServer;
 
 public class HttpHandlerWorkerOperation {
@@ -20,6 +22,15 @@ public class HttpHandlerWorkerOperation {
 			workerList_.add(new HttpHandlerWorker("http-worker-thread-" + String.valueOf(i + 1)));
 		}
 		leader_ = workerList_.get(currentIndex_++);
+		//DEBUG Mode
+		if(DebugChecker.isDEBUGMode()) {
+			for(HttpHandlerWorker worker : workerList_) {
+				QasiteLogger.debug("created Worker Thread = " + worker.getThreadName(), DebugChecker.DEBUG_WORKER_THREAD);
+			}
+			if(leader_ != null) {
+				QasiteLogger.debug("leader Thread = " + leader_.getThreadName(), DebugChecker.DEBUG_WORKER_THREAD);
+			}
+		}
 	}
 	
 	public static void registerAwaitReciverSocket(IServer server) {
@@ -85,14 +96,14 @@ public class HttpHandlerWorkerOperation {
 		if(currentIndex_ >= workerList_.size()) {
 			currentIndex_ = 0;
 		}
-		//debug
-//		workerList_.forEach(e -> {
-//			System.out.println(e.getName() + " : " + e.getWorkerState());
-//		});
 		HttpHandlerWorker tmpLeaderThread = workerList_.get(currentIndex_);
 		switch(tmpLeaderThread.getWorkerState()) {
 			case WAITING : {
 				leader_ = tmpLeaderThread;
+				//DEBUG Mode
+				if(DebugChecker.isDEBUGMode()) {
+					QasiteLogger.debug("CASE WAITING Set : leader Thread = " + leader_.getThreadName(), DebugChecker.DEBUG_WORKER_THREAD);
+				}
 				leader_.setDelegateAwaitProcess(server_);
 				currentIndex_++;
 				return;
@@ -100,6 +111,10 @@ public class HttpHandlerWorkerOperation {
 			case FAILED : {
 				tmpLeaderThread = new HttpHandlerWorker("http-worker-thread-" + String.valueOf(currentIndex_ + 1));
 				leader_ = tmpLeaderThread;
+				//DEBUG Mode
+				if(DebugChecker.isDEBUGMode()) {
+					QasiteLogger.debug("CASE FAILED Set : leader Thread = " + leader_.getThreadName(), DebugChecker.DEBUG_WORKER_THREAD);
+				}
 				leader_.setDelegateAwaitProcess(server_);
 				currentIndex_++;
 				return;

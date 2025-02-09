@@ -5,7 +5,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 import java.security.Security;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.propreader.ServerPropReader;
 
 public class MessageDigestTypeSHA1 {
@@ -17,7 +17,7 @@ public class MessageDigestTypeSHA1 {
 		try {
 			tmp = MessageDigest.getInstance("SHA-1", provider);
 		} catch(NoSuchAlgorithmException e) {
-			ServerLogger.getInstance().warn(e, "MessageDigestTypeSHA256 init error");
+			QasiteLogger.warn("MessageDigestTypeSHA256 init error", e);
 			tmp = null;
 		}
 		digest_ = tmp;

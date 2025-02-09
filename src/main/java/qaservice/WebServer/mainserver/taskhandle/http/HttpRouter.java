@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.mainserver.taskhandle.http.request.RequestHttpMethod;
 import qaservice.WebServer.mainserver.taskhandle.http.request.RequestMessage;
 import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpNotPageException;
@@ -24,6 +25,7 @@ public class HttpRouter {
 		RequestHttpMethod method = requestMessage.getRequestMethod();
 		String uri = requestMessage.getRequestPath();
 		if(!routerMap_.containsKey(method)) {
+			QasiteLogger.warn("Not page URI = " + uri + " method = " + method.toString());
 			throw new HttpNotPageException(method.name() + " can not use this web page.");
 		}
 		Map<Pattern, Method> routerMapInside = routerMap_.get(method);
@@ -75,10 +77,10 @@ public class HttpRouter {
 					}
 				}
 			}
-			ie.printStackTrace();
+			QasiteLogger.warn("delegateCreateResponseMethod error", ie);
 			throw new HttpRequestHandlingException(ie.getMessage());
 		} catch(IllegalAccessException ae) {
-			ae.printStackTrace();
+			QasiteLogger.warn("delegateCreateResponseMethod IllegalAccess error", ae);
 			throw new HttpRequestHandlingException(ae.getMessage());
 		}
 		return result;

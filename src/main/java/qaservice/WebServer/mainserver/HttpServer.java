@@ -5,7 +5,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
@@ -36,7 +36,7 @@ class HttpServer implements IServer {
 			try {
 				svrSock_.close();
 			} catch(IOException e) {
-				ServerLogger.getInstance().warn(e, "ServerSocket close operatione error");
+				QasiteLogger.warn("ServerSocket close operatione error", e);
 			}
 		}
 	}

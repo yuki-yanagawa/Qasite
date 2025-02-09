@@ -5,6 +5,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
 
 class WebSocketMessageUtil {
@@ -14,7 +15,6 @@ class WebSocketMessageUtil {
 		byte opCode = (byte) (first & 0x0F);
 		// Check the opCode value
 		if (opCode == 1) {
-			//System.out.println("Start Decode");
 		} else if (opCode == 8) {
 			return null;
 		}
@@ -30,7 +30,6 @@ class WebSocketMessageUtil {
 		} else if (length == 127) {
 			length = dis.readLong();
 		}
-		//System.out.println("Message Length: " + length);
 		// Read mask
 		byte[] mask = new byte[4];
 		dis.read(mask);
@@ -45,9 +44,6 @@ class WebSocketMessageUtil {
 			decodeByteArray[i] = (byte)(encodedCharArray[i] ^ mask[i % 4]);
 			//decoded.append(decodedChar);
 		}
-		//System.out.println("Decode Result  " + decoded.toString());
-		//return decoded.toString(CharUtil.getCharset());
-		//return new String(decodeByteArray, CharUtil.getCharset());
 		return decodeByteArray;
 	}
 
@@ -77,8 +73,7 @@ class WebSocketMessageUtil {
 			dos.flush();
 			return byteArray.toByteArray();
 		} catch(IOException e) {
-			System.err.println("write data error");
-			e.printStackTrace();
+			QasiteLogger.warn("write data error", e);
 		}
 		return null;
 	}

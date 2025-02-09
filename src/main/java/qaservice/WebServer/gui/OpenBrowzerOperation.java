@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
+import qaservice.Common.Logger.QasiteLogger;
+
 public class OpenBrowzerOperation {
 	public static boolean openWebBrowser(int port) {
 		boolean result = false;
@@ -13,7 +15,7 @@ public class OpenBrowzerOperation {
 			result = openChromeBrowser(port);
 		} catch(IOException e) {
 			result = false;
-			e.printStackTrace();
+			QasiteLogger.warn("open browzer error.", e);
 		}
 		if(result) {
 			return result;
@@ -23,7 +25,7 @@ public class OpenBrowzerOperation {
 			try {
 				Desktop.getDesktop().browse(new URI("http://localhost:" + port));
 			} catch(Exception e) {
-				e.printStackTrace();
+				QasiteLogger.warn("open browzer error.", e);
 				return false;
 			}
 		}

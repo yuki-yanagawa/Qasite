@@ -8,6 +8,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import qaservice.Common.Logger.QasiteLogger;
+import qaservice.Common.debug.DebugChecker;
 import qaservice.WebServer.propreader.ServerPropKey;
 import qaservice.WebServer.propreader.ServerPropReader;
 
@@ -46,7 +48,7 @@ public class DBConnectionOperation {
 				dbConnectionPool_.put(con, false);
 			}
 		} catch(SQLException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("create DB connection pool error.", e);
 		}
 	}
 	
@@ -66,7 +68,7 @@ public class DBConnectionOperation {
 				dbConnectionPool_.clear();
 			}
 		} catch(SQLException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("connection pool close error.", e);
 		}
 	}
 
@@ -74,6 +76,10 @@ public class DBConnectionOperation {
 		for(Entry<Connection, Boolean> conn : dbConnectionPool_.entrySet()){
 			if(conn.getValue() == false) {
 				dbConnectionPool_.put(conn.getKey(), true);
+				if(DebugChecker.isDEBUGMode()) {
+					QasiteLogger.debug("connection get = " + conn.getKey() + "Thread : " + Thread.currentThread().getName(), 
+							DebugChecker.DEBUG_DB_CONNECTION);
+				}
 				return conn.getKey();
 			}
 		}
@@ -82,10 +88,14 @@ public class DBConnectionOperation {
 	
 	public synchronized void endUsedConnctionNotify(Connection conn) {
 		dbConnectionPool_.put(conn, false);
-		System.out.println("connection checker");
-		dbConnectionPool_.entrySet().forEach(e -> {
-			System.out.println(e.getKey() + "/" + e.getValue());
-		});
+		//DEBUG CHECK
+		if(DebugChecker.isDEBUGMode()) {
+			dbConnectionPool_.entrySet().forEach(e -> {
+				if(e.getValue()) {
+					QasiteLogger.debug("connection used : " + e.getKey(), DebugChecker.DEBUG_DB_CONNECTION);
+				}
+			});
+		}
 	}
 
 	private static boolean enabledCreateDBConnectionFucntionCalled() {

@@ -20,8 +20,8 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.Timer;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
-import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.main.WebServerStartingOperation;
 import qaservice.WebServer.mainserver.ServerOperator;
 import qaservice.WebServer.mainserver.taskhandle.http.FileReadCasheClear;
@@ -169,6 +169,7 @@ public class GuiMainFrame extends JFrame implements ActionListener{
 						boolean serverStartResult = ServerOperator.mainServerStart(PORT);
 						if(!serverStartResult) {
 							GuiConsoleOperation.writeConsoleArea("http server start error. You should check log file.");
+							return;
 						}
 						GuiConsoleOperation.writeConsoleArea("http server start.port no = " + String.valueOf(PORT));
 						progressBar_.setValue(60);
@@ -206,7 +207,7 @@ public class GuiMainFrame extends JFrame implements ActionListener{
 						}
 						if(System.getenv("JAVA_HOME") == null) {
 							progressBar_.setValue(100);
-							ServerLogger.getInstance().warn("DBServer cannot start. beacuse java path is not enable.");
+							QasiteLogger.warn("DBServer cannot start. beacuse java path is not enable.");
 							return;
 						}
 //						ProcessBuilder processBuilder = new ProcessBuilder("java", "datasheet.DBServer.main.DBServerMain");
@@ -273,7 +274,6 @@ public class GuiMainFrame extends JFrame implements ActionListener{
 						break;
 					}
 					case SECOND_STAGE : {
-						serverLoggerSettingOff();
 						serverState_.setForeground(SERVER_OFF);
 						GuiConsoleOperation.writeConsoleArea("http server is stoped");
 						timeSleep(1000);
@@ -374,7 +374,7 @@ public class GuiMainFrame extends JFrame implements ActionListener{
 		try {
 			Thread.sleep(miltimes);
 		} catch(InterruptedException e) {
-			e.printStackTrace();
+			//QasiteLogger.info("interruput", true);
 		}
 	}
 	
@@ -387,9 +387,5 @@ public class GuiMainFrame extends JFrame implements ActionListener{
 //		ServerLogger.getInstance().appLog("           ***************                 ");
 //	}
 	
-	private static void serverLoggerSettingOff() {
-		//Server logger create Instance
-		ServerLogger.killLogSetting();
-	}
 
 }

@@ -11,13 +11,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.dbaccesor.cashe.TimestampWrapCahse;
 import qaservice.Common.img.ImageUtil;
 import qaservice.Common.model.user.UserInfo;
 import qaservice.Common.utiltool.GZipUtil;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
-import qaservice.WebServer.logger.ServerLogger;
 
 public class AnswerTableAccessor {
 	private static Map<Integer, Map<String, TimestampWrapCahse<Integer>>> poinActCasheByAnswerId_;
@@ -49,8 +49,7 @@ public class AnswerTableAccessor {
 
 	public static Map<Integer, Map<String, Object>> getAnswerIdAndLatestUpdateDateGroupingQuestionId(Connection conn) {
 		if(conn == null) {
-//			ServerLogger.getInstance().warn("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId DB connection Error");
-			System.err.println("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId DB connection Error");
+			QasiteLogger.warn("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId DB connection Error");
 			return new HashMap<>();
 		}
 //		String sql = "SELECT A.QUESTIONID, A.ANSWERID, A.UPDATE_DATE FROM ANSWERTABLE AS A" 
@@ -68,8 +67,7 @@ public class AnswerTableAccessor {
 			}
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId Error");
-			System.err.println("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId Error");
-			e.printStackTrace();
+			QasiteLogger.warn("AnswerTable access getAnswerIdAndUpdateDateGroupingQuestionId Error", e);
 			return new HashMap<>();
 		}
 		return retMap;
@@ -77,7 +75,7 @@ public class AnswerTableAccessor {
 
 	public static Map<Integer, Map<Integer, Timestamp>> getAnswerIdAndUpdateDateByQuestionId(Connection conn, int[] answerId) {
 		if(conn == null) {
-			ServerLogger.getInstance().warn("AnswerTable access getAnswerCountByQuestionId DB connection Error");
+			QasiteLogger.warn("AnswerTable access getAnswerCountByQuestionId DB connection Error");
 			return new HashMap<>();
 		}
 		String sql = "SELECT DISTINCT QUESTIONID, ANSWERID, UPDATE_DATE FROM ANSWERTABLE WHERE QUESTIONID in (" + createSeparateLinerCharcter('?', answerId.length) +") ANSWERVALID = true";
@@ -90,9 +88,7 @@ public class AnswerTableAccessor {
 				retMap.put(rs.getInt(1), innerMap);
 			}
 		} catch(SQLException e) {
-//			ServerLogger.getInstance().warn(e, "AnswerTable access getAnswerCountByQuestionId Error");
-			System.err.println("AnswerTable access getAnswerCountByQuestionId Error");
-			e.printStackTrace();
+			QasiteLogger.warn("AnswerTable access getAnswerCountByQuestionId Error", e);
 			return new HashMap<>();
 		}
 		return retMap;
@@ -101,15 +97,13 @@ public class AnswerTableAccessor {
 	public static int insertAnswer(Connection conn, byte[] answerData, int questionId, UserInfo userInfo) {
 		int newId = getRegistNumber(conn);
 		if(newId == -1) {
-			//ServerLogger.getInstance().warn("new id getting Error");
-			System.err.println("new id getting Error");
+			QasiteLogger.warn("new id getting Error");
 			return -1;
 		}
 		
 		int userId = userInfo.getUserId();
 		if(userId == -1) {
-//			ServerLogger.getInstance().warn("user id getting Error");
-			System.err.println("user id getting Error");
+			QasiteLogger.warn("user id getting Error");
 			return -1;
 		}
 
@@ -125,15 +119,12 @@ public class AnswerTableAccessor {
 			ps.setTimestamp(parameterIndex++, new Timestamp(System.currentTimeMillis()));
 			int result = ps.executeUpdate();
 			if(result != 1) {
-//				ServerLogger.getInstance().warn("Insert Error");
-				System.err.println("Insert Error");
+				QasiteLogger.warn("Insert Error");
 				return -1;
 			}
 			return newId;
 		} catch(SQLException e) {
-			System.err.println("Insert Error");
-			e.printStackTrace();
-//			ServerLogger.getInstance().warn(e, "Insert Error");
+			QasiteLogger.warn("Insert Error", e);
 			return -1;
 		}
 	}
@@ -152,19 +143,88 @@ public class AnswerTableAccessor {
 			ps.setTimestamp(parameterIndex++, new Timestamp(System.currentTimeMillis()));
 			int result = ps.executeUpdate();
 			if(result != 1) {
-				System.err.println("Insert Error");
+				QasiteLogger.warn("Insert Error");
 				return false;
 			}
 			return true;
 		} catch(SQLException e) {
-			System.err.println("Insert Error");
-			e.printStackTrace();
+			QasiteLogger.warn("Insert Error", e);
 //			ServerLogger.getInstance().warn(e, "Insert Error");
 			return false;
 		}
 	}
 
 	public static List<Map<String, Object>> getAnswerDetailData(Connection conn, int questionId, UserInfo userInfo) {
+		String actionSql = "SELECT A.ANSWERID,"
+				+ " COUNT(DISTINCT GOOD_ACTION_USER_ID) AS GOODPOINTCOUNT, COUNT(DISTINCT HELPFUL_ACTION_USER_ID) AS HELPFULPOINTCOUNT,"
+				+ " MAX(CASE WHEN GOOD_ACTION_USER_ID = ? THEN 1 ELSE 0 END) AS GOODPOINTACT,"
+				+ " MAX(CASE WHEN HELPFUL_ACTION_USER_ID = ? THEN 1 ELSE 0 END) AS HELPFULPOINTACT"
+				+ " FROM ANSWERTABLE AS A"
+				+ " LEFT OUTER JOIN ANSWERGOODPOINTTABLE AS AG ON A.ANSWERID = AG.ANSWERID AND AG.GOOD_ACTION = true"
+				+ " LEFT OUTER JOIN ANSWERHELPFULPOINTTABLE AS AH ON A.ANSWERID = AH.ANSWERID AND AH.HELPFUL_ACTION = true"
+				+ " WHERE QUESTIONID = ? AND ANSWERVALID = ?"
+				+ " GROUP BY A.ANSWERID ORDER BY A.ANSWERID";
+		Map<Integer, Map<String, Object>> pointResult = new HashMap<>();
+		try(PreparedStatement ps = conn.prepareStatement(actionSql)) {
+			int userId = -1;
+			if(userInfo != null) {
+				userId = userInfo.getUserId();
+			}
+			ps.setInt(1, userId);
+			ps.setInt(2, userId);
+			ps.setInt(3, questionId);
+			ps.setBoolean(4, true);
+			ResultSet rs = ps.executeQuery();
+			while(rs.next()) {
+				int answerId = rs.getInt(1);
+				Map<String, Object> innerMap = new HashMap<>();
+				innerMap.put("goodPointCount", rs.getInt(2));
+				innerMap.put("helpfulPointCount", rs.getInt(3));
+				if(rs.getInt(4) > 0) {
+					innerMap.put("goodPointAction", true);
+				} else {
+					innerMap.put("goodPointAction", false);
+				}
+				if(rs.getInt(5) > 0) {
+					innerMap.put("helpfulPointAction", true);
+				} else {
+					innerMap.put("helpfulPointAction", false);
+				}
+				pointResult.put(answerId, innerMap);
+			}
+		} catch(SQLException e) {
+			QasiteLogger.warn("Insert Error", e);
+			return new ArrayList<>();
+		}
+		List<Map<String, Object>> retList = new ArrayList<>();
+		String sql = "SELECT A.ANSWERID, A.ANSWER_DETAIL_DATA, USR.USERNAME ,A.UPDATE_DATE ,USR.USERID FROM ANSWERTABLE AS A"
+				+ " JOIN USERTABLE AS USR ON USR.USERID = A.USERID"
+				+ " WHERE QUESTIONID = ? AND ANSWERVALID = ? ORDER BY A.ANSWERID DESC";
+		try(PreparedStatement ps = conn.prepareStatement(sql)) {
+			ps.setInt(1, questionId);
+			ps.setBoolean(2, true);
+			ResultSet rs = ps.executeQuery();
+			while(rs.next()) {
+				Map<String, Object> innerMap = new HashMap<>();
+				int answerId = rs.getInt(1);
+				innerMap.put(AnswerTableColoumn.ANSWERID.clientCommonName, answerId);
+				innerMap.put(AnswerTableColoumn.ANSWER_DETAIL_DATA.clientCommonName, rs.getString(2));
+				innerMap.put(UserTableAccessor.UserTableColoumn.USERNAME.clientCommonName, rs.getString(3));
+				innerMap.put(AnswerTableColoumn.UPDATE_DATE.clientCommonName, rs.getString(4).split("\\.")[0]);
+				
+				int userId = rs.getInt(5);
+				innerMap.put("answeredUserId", userId);
+				innerMap.putAll(pointResult.get(answerId));
+				retList.add(innerMap);
+			}
+			return retList;
+		} catch(SQLException e) {
+			QasiteLogger.warn("getQuestionDetailData error. data base connection", e);
+			return new ArrayList<>();
+		}
+	}
+
+	public static List<Map<String, Object>> getAnswerDetailData_old(Connection conn, int questionId, UserInfo userInfo) {
 		
 		Map<Integer, Map<String, List<Integer>>> actionMap = new HashMap<>(); 
 		//Key=AnswerId, Value=(InnerKey1=goodPoint, InnerValue=goodActUserId InnerKey2=helpfulPoint, InnerValue=helpfulUserId
@@ -197,8 +257,7 @@ public class AnswerTableAccessor {
 			}
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "getQuestionDetailData error. data base connection");
-			System.err.println("Insert Error");
-			e.printStackTrace();
+			QasiteLogger.warn("Insert Error", e);
 			return new ArrayList<>();
 		} 
 
@@ -243,8 +302,7 @@ public class AnswerTableAccessor {
 			return retList;
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "getQuestionDetailData error. data base connection");
-			System.err.println("getQuestionDetailData error. data base connection");
-			e.printStackTrace();
+			QasiteLogger.warn("getQuestionDetailData error. data base connection", e);
 			return new ArrayList<>();
 		}
 	}
@@ -271,8 +329,7 @@ public class AnswerTableAccessor {
 			ps.executeUpdate();
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "good action regist error");
-			System.err.println("good action regist error");
-			e.printStackTrace();
+			QasiteLogger.warn("good action regist error", e);
 			return -1;
 		}
 
@@ -286,8 +343,7 @@ public class AnswerTableAccessor {
 			return -1;
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "good action regist error");
-			System.err.println("good action regist error");
-			e.printStackTrace();
+			QasiteLogger.warn("good action regist error", e);
 			return -1;
 		} finally {
 			dbConnOpe.endUsedConnctionNotify(conn);
@@ -298,7 +354,7 @@ public class AnswerTableAccessor {
 		int userId = UserTableAccessor.getUserIdByUserName(conn, username);
 		if(userId == -1) {
 //			ServerLogger.getInstance().warn("good action userid getting error");
-			System.err.println("good action userid getting error");
+			QasiteLogger.warn("good action userid getting error");
 			return -1;
 		}
 
@@ -320,8 +376,7 @@ public class AnswerTableAccessor {
 			ps.executeUpdate();
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "good action regist error");
-			System.err.println("good action userid getting error");
-			e.printStackTrace();
+			QasiteLogger.warn("good action userid getting error", e);
 			return -1;
 		}
 
@@ -335,8 +390,7 @@ public class AnswerTableAccessor {
 			return -1;
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "good action regist error");
-			System.err.println("good action regist error");
-			e.printStackTrace();
+			QasiteLogger.warn("good action regist error", e);
 			return -1;
 		}
 	}
@@ -355,8 +409,7 @@ public class AnswerTableAccessor {
 					return goodActionRegistFromCashe(conn, answerId, userId);
 				} catch(SQLException e) {
 //					ServerLogger.getInstance().warn(e, "good action regist error");
-					System.err.println("good action regist error");
-					e.printStackTrace();
+					QasiteLogger.warn("good action regist error", e);
 					return -1;
 				}
 			} else {
@@ -388,8 +441,7 @@ public class AnswerTableAccessor {
 			ps.executeUpdate();
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "good action delete error");
-			System.err.println("good action delete error");
-			e.printStackTrace();
+			QasiteLogger.warn("good action delete error", e);
 			return -1;
 		}
 
@@ -414,8 +466,7 @@ public class AnswerTableAccessor {
 				ps.executeUpdate();
 			} catch(SQLException e) {
 //				ServerLogger.getInstance().warn(e, "good action regist error");
-				System.err.println("good action regist error");
-				e.printStackTrace();
+				QasiteLogger.warn("good action regist error", e);
 				conn.rollback();
 				return -1;
 			}
@@ -427,7 +478,7 @@ public class AnswerTableAccessor {
 			ps.setBoolean(setIndex++, true);
 			ps.executeUpdate();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "good action regist error");
+			QasiteLogger.warn("good action regist error", e);
 			conn.rollback();
 			return -1;
 		} finally {
@@ -456,8 +507,7 @@ public class AnswerTableAccessor {
 			}
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "AnswerTable Insert ImgData Error.");
-			System.err.println("AnswerTable Insert ImgData Error.");
-			e.printStackTrace();
+			QasiteLogger.warn("AnswerTable Insert ImgData Error.", e);
 		}
 		return false;
 	}
@@ -473,8 +523,7 @@ public class AnswerTableAccessor {
 			}
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "AnswerTable User Check Error.");
-			System.err.println("AnswerTable User Check Error.");
-			e.printStackTrace();
+			QasiteLogger.warn("AnswerTable User Check Error.", e);
 		}
 		return false;
 	}
@@ -490,8 +539,7 @@ public class AnswerTableAccessor {
 			}
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "AnswerTable revert Error.");
-			System.err.println("AnswerTable revert Error.");
-			e.printStackTrace();
+			QasiteLogger.warn("AnswerTable revert Error.", e);
 			return false;
 		}
 
@@ -501,8 +549,7 @@ public class AnswerTableAccessor {
 			int result = ps.executeUpdate();
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "ANSWERSUBTABLEIMAGE revert Error.");
-			System.err.println("ANSWERSUBTABLEIMAGE revert Error.");
-			e.printStackTrace();
+			QasiteLogger.warn("ANSWERSUBTABLEIMAGE revert Error.", e);
 			return false;
 		}
 
@@ -512,8 +559,7 @@ public class AnswerTableAccessor {
 			int result = ps.executeUpdate();
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "ANSWERSUBTABLEIMAGE revert Error.");
-			System.err.println("ANSWERSUBTABLEIMAGE revert Error.");
-			e.printStackTrace();
+			QasiteLogger.warn("ANSWERSUBTABLEIMAGE revert Error.");
 			return false;
 		}
 		return true;
@@ -530,8 +576,7 @@ public class AnswerTableAccessor {
 			}
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "AnswerTable User Check Error.");
-			System.err.println("AnswerTable User Check Error.");
-			e.printStackTrace();
+			QasiteLogger.warn("AnswerTable User Check Error.", e);
 		}
 		return false;
 	}
@@ -553,8 +598,7 @@ public class AnswerTableAccessor {
 			}
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "AnswerTable Insert LinkData Error.");
-			System.err.println("AnswerTable Insert LinkData Error.");
-			e.printStackTrace();
+			QasiteLogger.warn("AnswerTable Insert LinkData Error.", e);
 		}
 		return false;
 	}
@@ -575,12 +619,10 @@ public class AnswerTableAccessor {
 			return retMap;
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "getAnswerImageData error. data base connection");
-			System.err.println("getAnswerImageData error. data base connection");
-			e.printStackTrace();
+			QasiteLogger.warn("getAnswerImageData error. data base connection", e);
 			return new HashMap<>();
 		} catch(IOException e) {
-			System.err.println("resizeAnswerImageData error. data base connection");
-			e.printStackTrace();
+			QasiteLogger.warn("resizeAnswerImageData error. data base connection", e);
 			return new HashMap<>();
 		}
 	}
@@ -602,8 +644,7 @@ public class AnswerTableAccessor {
 			return retMap;
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
-			System.err.println("answerLinkFileData error. data base connection");
-			e.printStackTrace();
+			QasiteLogger.warn("answerLinkFileData error. data base connection", e);
 			return new HashMap<>();
 		}
 	}
@@ -620,8 +661,7 @@ public class AnswerTableAccessor {
 			return goodActPatternMap;
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
-			System.err.println("answerLinkFileData error. data base connection");
-			e.printStackTrace();
+			QasiteLogger.warn("answerLinkFileData error. data base connection", e);
 			return new HashMap<>();
 		}
 	}
@@ -636,8 +676,7 @@ public class AnswerTableAccessor {
 			}
 		} catch(SQLException e) {
 //			ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
-			System.err.println("answerLinkFileData error. data base connection");
-			e.printStackTrace();
+			QasiteLogger.warn("answerLinkFileData error. data base connection", e);
 		}
 		return false;
 	}
@@ -659,8 +698,7 @@ public class AnswerTableAccessor {
 				ps.executeUpdate();
 			} catch(SQLException e) {
 //				ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
-				System.err.println("answerLinkFileData error. data base connection");
-				e.printStackTrace();
+				QasiteLogger.warn("answerLinkFileData error. data base connection", e);
 			}
 		}
 		int[] insertUserIds = userMap.entrySet().stream().filter(e -> e.getValue() && !userGoodActMap.containsKey(e.getKey())).mapToInt(e-> e.getKey()).toArray();
@@ -674,8 +712,7 @@ public class AnswerTableAccessor {
 				ps.executeUpdate();
 			} catch(SQLException e) {
 //				ServerLogger.getInstance().warn(e, "answerLinkFileData error. data base connection");
-				System.err.println("answerLinkFileData error. data base connection");
-				e.printStackTrace();
+				QasiteLogger.warn("answerLinkFileData error. data base connection", e);
 			}
 		}
 	}
@@ -695,16 +732,61 @@ public class AnswerTableAccessor {
 	public static int getAnswerId(Connection conn, String username) {
 		int userId = UserTableAccessor.getUserIdByUserName(conn, username);
 		if(userId == -1) {
-			ServerLogger.getInstance().warn("AnswerTable Insert Error. user id get failed");
+			QasiteLogger.warn("AnswerTable Insert Error. user id get failed");
 			return -1;
 		}
 
 		int newId = getRegistNumber(conn);
 		if(newId == -1) {
-			ServerLogger.getInstance().warn("QuestionTable Insert Error");
+			QasiteLogger.warn("QuestionTable Insert Error. new id getting failed");
 			return -1;
 		}
 		return newId;
+	}
+
+	public static int getAnswerPostCount(Connection conn, int userid) {
+		String sql = "SELECT COUNT(ANSWERID) FORM ANSWERTABLE WHERE ANSWERVALID = true AND USERID = ?";
+		try(PreparedStatement ps = conn.prepareStatement(sql)) {
+			ps.setInt(1, userid);
+			ResultSet rs = ps.executeQuery();
+			if(!rs.next()) {
+				return 0;
+			}
+			return rs.getInt(1);
+		} catch(SQLException e) {
+			QasiteLogger.warn("get Answer post count error");
+			return 0;
+		}
+	}
+
+	public static int getGooActCount(Connection conn, int userid) {
+		String sql = "SELECT COUNT(ANSWERID) FROM ANSWERGOODPOINTTABLE WHERE GOOD_ACTION_USER_ID = ?";
+		try(PreparedStatement ps = conn.prepareStatement(sql)) {
+			ps.setInt(1, userid);
+			ResultSet rs = ps.executeQuery();
+			if(!rs.next()) {
+				return 0;
+			}
+			return rs.getInt(1);
+		} catch(SQLException e) {
+			QasiteLogger.warn("getGood act error");
+			return 0;
+		}
+	}
+
+	public static int getHelpfulCount(Connection conn, int userid) {
+		String sql = "SELECT COUNT(ANSWERID) FROM ANSWERHELPFULPOINTTABLE WHERE HELPFUL_ACTION_USER_ID = ?";
+		try(PreparedStatement ps = conn.prepareStatement(sql)) {
+			ps.setInt(1, userid);
+			ResultSet rs = ps.executeQuery();
+			if(!rs.next()) {
+				return 0;
+			}
+			return rs.getInt(1);
+		} catch(SQLException e) {
+			QasiteLogger.warn("getHelpful error");
+			return 0;
+		}
 	}
 
 	private static byte[] compressedDataByGzip(byte[] rawData) {

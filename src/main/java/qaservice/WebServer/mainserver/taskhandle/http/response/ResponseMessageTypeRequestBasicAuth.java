@@ -3,7 +3,7 @@ package qaservice.WebServer.mainserver.taskhandle.http.response;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpRequestHandlingException;
 
 public class ResponseMessageTypeRequestBasicAuth extends ResponseMessage {
@@ -25,7 +25,7 @@ public class ResponseMessageTypeRequestBasicAuth extends ResponseMessage {
 				.append(ResponseMessageCreateHelper.END_CODE);
 			byteArrayOutputStream.write(sb.toString().getBytes()); 
 		} catch (IOException e) {
-			ServerLogger.getInstance().warn(e, "create response message error type basic auth");
+			QasiteLogger.warn("create response message error type basic auth", e);
 			throw new HttpRequestHandlingException("create response message error");
 		}
 		return byteArrayOutputStream.toByteArray();

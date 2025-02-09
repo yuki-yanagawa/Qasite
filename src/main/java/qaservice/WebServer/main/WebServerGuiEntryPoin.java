@@ -4,8 +4,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.file.Paths;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.gui.GuiMainFrame;
 import qaservice.WebServer.mainserver.taskhandle.http.FileManager;
 import qaservice.WebServer.propreader.ServerPropKey;
@@ -14,16 +14,21 @@ import qaservice.WebServer.propreader.ServerPropReader;
 public class WebServerGuiEntryPoin {
 	private static PrintStream consoleOutStream_;
 	private static FileOutputStream fileOutputStream_;
+	private static final String serviceName = "QAserviceWebServer";
 	public static void main(String[] args) {
 		try {
 			//Server properties read
 			Class.forName("qaservice.WebServer.propreader.ServerPropKey");
 			Class.forName("qaservice.WebServer.propreader.ServerPropReader");
-			//Console Out Setting
-			settingConsoleOut();
 			//Common util read
+			Class.forName("qaservice.Common.Logger.QasiteLogger");
 			Class.forName("qaservice.Common.charcterutil.CharUtil");
 			Class.forName("qaservice.Common.dateutil.ServerDateUtil");
+			Class.forName("qaservice.Common.userPoint.UserPointDefinition");
+			Class.forName("qaservice.Common.userPoint.UserPointCommnucatiReciver");
+			loggerSetting();
+			//Console Out Setting
+			settingConsoleOut();
 			//Html File ReWrite
 			FileManager.getInstance();
 		} catch(ClassNotFoundException e) {
@@ -49,6 +54,15 @@ public class WebServerGuiEntryPoin {
 
 			System.setOut(consoleOutStream_);
 			System.setErr(consoleOutStream_);
+		}
+	}
+
+	private static void loggerSetting() {
+		try {
+			QasiteLogger.startLogger(serviceName);
+		} catch(Exception e) {
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 }

@@ -10,6 +10,8 @@ import java.net.Socket;
 
 import javax.net.ssl.SSLSocket;
 
+import qaservice.Common.Logger.QasiteLogger;
+
 public class WrapperSocket <T extends Socket> implements Closeable {
 	private InputStream inputStream_;
 	private OutputStream outputStream_;
@@ -60,7 +62,7 @@ public class WrapperSocket <T extends Socket> implements Closeable {
 		try {
 			close();
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("finish connect error.", e);
 		}
 	}
 

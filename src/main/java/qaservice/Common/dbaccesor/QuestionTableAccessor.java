@@ -14,13 +14,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.charcterutil.messageDigest.MessageDigestTypeSHA256;
 import qaservice.Common.img.ImageUtil;
 import qaservice.Common.model.user.UserInfo;
 import qaservice.Common.utiltool.GZipUtil;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
-import qaservice.WebServer.logger.ServerLogger;
 
 public class QuestionTableAccessor {
 	public static enum QuestionTableColoumn {
@@ -81,7 +81,7 @@ public class QuestionTableAccessor {
 				retMapList.add(innerRetMap);
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QuestionTable access getAllQuetionData Error");
+			QasiteLogger.warn("QuestionTable access getAllQuetionData Error", e);
 			return new ArrayList<>();
 		}
 		return retMapList;
@@ -105,7 +105,7 @@ public class QuestionTableAccessor {
 				retMap.put("questionDate", rs.getString(5).split("\\.")[0]);
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "getQuestionDetailData error. data base connection");
+			QasiteLogger.warn("getQuestionDetailData error. data base connection", e);
 			return new HashMap<>();
 		}
 
@@ -151,10 +151,10 @@ public class QuestionTableAccessor {
 			}
 			return retMap;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "getQuestionImageData error. data base connection");
+			QasiteLogger.warn("getQuestionImageData error. data base connection", e);
 			return new HashMap<>();
 		} catch(IOException e) {
-			ServerLogger.getInstance().warn(e, "resizeImgData error. data base connection");
+			QasiteLogger.warn("resizeImgData error. data base connection", e);
 			return new HashMap<>();
 		}
 	}
@@ -175,7 +175,7 @@ public class QuestionTableAccessor {
 			retMap.put("quetionLinkFile", retArrayList);
 			return retMap;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "getQuestionImageData error. data base connection");
+			QasiteLogger.warn("getQuestionImageData error. data base connection", e);
 			return new HashMap<>();
 		}
 	}
@@ -183,13 +183,13 @@ public class QuestionTableAccessor {
 	public static int getQuestionId(Connection conn, String username) {
 		int userId = UserTableAccessor.getUserIdByUserName(conn, username);
 		if(userId == -1) {
-			ServerLogger.getInstance().warn("QuestionTable Insert Error. user id get failed");
+			QasiteLogger.warn("QuestionTable Insert Error. user id get failed");
 			return -1;
 		}
 
 		int newId = getRegistNumber(conn);
 		if(newId == -1) {
-			ServerLogger.getInstance().warn("QuestionTable Insert Error");
+			QasiteLogger.warn("QuestionTable Insert Error. new id getting failed.");
 			return -1;
 		}
 		return newId;
@@ -208,13 +208,13 @@ public class QuestionTableAccessor {
 	public static int insertQuestionTable(Connection conn, byte[] titleData, byte[] questionDetailData, String username, int type) {
 		int newId = getRegistNumber(conn);
 		if(newId == -1) {
-			ServerLogger.getInstance().warn("QuestionTable Insert Error");
+			QasiteLogger.warn("QuestionTable Insert Error");
 			return -1;
 		}
 		
 		int userId = UserTableAccessor.getUserIdByUserName(conn, username);
 		if(userId == -1) {
-			ServerLogger.getInstance().warn("QuestionTable Insert Error. user id get failed");
+			QasiteLogger.warn("QuestionTable Insert Error. user id get failed");
 			return -1;
 		}
 
@@ -234,7 +234,7 @@ public class QuestionTableAccessor {
 				ps.setTimestamp(setIndex++, new Timestamp(System.currentTimeMillis()));
 				int result = ps.executeUpdate();
 				if(result <= 0) {
-					ServerLogger.getInstance().warn("QuestionTable Insert Error. result value");
+					QasiteLogger.warn("QuestionTable Insert Error. result value");
 					return -1;
 				}
 			}
@@ -263,7 +263,7 @@ public class QuestionTableAccessor {
 			conn.setAutoCommit(true);
 			return newId;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QuestionTable Insert Error.");
+			QasiteLogger.warn("QuestionTable Insert Error.", e);
 			return -1;
 		}
 	}
@@ -278,7 +278,7 @@ public class QuestionTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QuestionTable User Check Error.");
+			QasiteLogger.warn("QuestionTable Upadte Error.", e);
 		}
 		return false;
 	}
@@ -293,7 +293,7 @@ public class QuestionTableAccessor {
 				return false;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QuestionTable revert Error.");
+			QasiteLogger.warn("QuestionTable revert Error.", e);
 			return false;
 		}
 
@@ -302,7 +302,7 @@ public class QuestionTableAccessor {
 			ps.setInt(1, questionId);
 			int result = ps.executeUpdate();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QUESTIONSUBTABLEIMAGE revert Error.");
+			QasiteLogger.warn("QUESTIONSUBTABLEIMAGE revert Error.", e);
 			return false;
 		}
 
@@ -311,7 +311,7 @@ public class QuestionTableAccessor {
 			ps.setInt(1, questionId);
 			int result = ps.executeUpdate();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QUESTIONSUBTABLEIMAGE revert Error.");
+			QasiteLogger.warn("QUESTIONSUBTABLEIMAGE revert Error.", e);
 			return false;
 		}
 		return true;
@@ -337,7 +337,7 @@ public class QuestionTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QUESTIONSUBTABLE-INSERT Text Error.");
+			QasiteLogger.warn("QUESTIONSUBTABLE-INSERT Text Error.", e);
 		}
 		return false;
 	}
@@ -354,7 +354,7 @@ public class QuestionTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QuestionTable Insert ImgData Error.");
+			QasiteLogger.warn("QuestionTable Insert ImgData Error.", e);
 		}
 		return false;
 	}
@@ -375,7 +375,7 @@ public class QuestionTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QuestionTable Insert LinkData Error.");
+			QasiteLogger.warn("QuestionTable Insert LinkData Error.", e);
 		}
 		return false;
 	}
@@ -390,7 +390,7 @@ public class QuestionTableAccessor {
 				return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QuestionTable User Check Error.");
+			QasiteLogger.warn("QuestionTable User Check Error.", e);
 		}
 		return false;
 	}
@@ -405,7 +405,7 @@ public class QuestionTableAccessor {
 				if(userId == rs.getInt(1)) return true;
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "QuestionTable User Check Error.");
+			QasiteLogger.warn("QuestionTable User Check Error.", e);
 		}
 		return false;
 	}
@@ -458,7 +458,7 @@ public class QuestionTableAccessor {
 			}
 			return retMapList;
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "searchQuestion data Error.");
+			QasiteLogger.warn("searchQuestion data Error.", e);
 			return new ArrayList<>();
 		}
 	}
@@ -513,6 +513,21 @@ public class QuestionTableAccessor {
 		return sql;
 	}
 
+	public static int getQuetionPostCount(Connection conn, int userid) {
+		String sql = "SELECT COUNT(QUESTIONID) FROM QUESTIONTABLE WHERE QUESTVALID = true AND USERID = ?";
+		try(PreparedStatement ps = conn.prepareStatement(sql)) {
+			ps.setInt(1, userid);
+			ResultSet rs = ps.executeQuery();
+			if(!rs.next()) {
+				return 0;
+			}
+			return rs.getInt(1);
+		} catch(SQLException e) {
+			QasiteLogger.warn("getQuetion post count error.");
+			return 0;
+		}
+	}
+
 	private static int[] getQestionIdByAnswerPattern(int answerPattern) {
 		Set<Integer> questionIdSet = new HashSet<>();
 		//ANSWER PATTERN
@@ -543,7 +558,7 @@ public class QuestionTableAccessor {
 			}
 			return questionIdSet.stream().mapToInt(e -> e).toArray();
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "getQestionIdByAnswerPattern Error");
+			QasiteLogger.warn("getQestionIdByAnswerPattern Error", e);
 			return new int[0];
 		} finally {
 			dbConnOpe.endUsedConnctionNotify(conn);

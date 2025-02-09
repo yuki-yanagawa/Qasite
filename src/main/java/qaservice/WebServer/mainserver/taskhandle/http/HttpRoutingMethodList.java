@@ -17,16 +17,14 @@ import java.util.regex.Pattern;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.dbaccesor.AnswerTableAccessor;
 import qaservice.Common.img.ImageUtil;
 import qaservice.Common.mailutil.MailSendUtil;
 import qaservice.Common.model.user.UserInfo;
 import qaservice.Common.utiltool.GZipUtil;
-import qaservice.WebServer.accessDBServer.AnswerDataLogic;
-import qaservice.WebServer.accessDBServer.QuestionDataLogic;
-import qaservice.WebServer.accessDBServer.UserDataLogic;
-import qaservice.WebServer.logger.ServerLogger;
+import qaservice.WebServer.controller.CreateResponseFacade;
 import qaservice.WebServer.mainserver.taskhandle.http.request.RequestHttpMethod;
 import qaservice.WebServer.mainserver.taskhandle.http.request.RequestMessage;
 import qaservice.WebServer.mainserver.taskhandle.http.request.RequsetHeaderType;
@@ -41,6 +39,9 @@ import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTy
 import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeRequestBasicAuth;
 import qaservice.WebServer.mainserver.taskhandle.http.response.ResponseMessageTypeWebSocket;
 import qaservice.WebServer.mainserver.taskhandle.http.session.SessionOperator;
+import qaservice.WebServer.model.accessDBServer.AnswerDataLogic;
+import qaservice.WebServer.model.accessDBServer.QuestionDataLogic;
+import qaservice.WebServer.model.accessDBServer.UserDataLogic;
 
 class HttpRoutingMethodList {
 	
@@ -131,7 +132,7 @@ class HttpRoutingMethodList {
 		} else {
 			String userName = SessionOperator.getUserDataFromSession(cookie);
 			if(userName == null) {
-				ServerLogger.getInstance().info("sessionid is " + cookie + ". this is not enable");
+				QasiteLogger.info("sessionid is " + cookie + ". this is not enable");
 				return new ResponseMessageTypeLeadLocation(requestMess.getHttpProtocol(), "/login");
 			}
 			byte[] fileByteData = FileManager.getInstance().fileRead("html/requestPostPage.html");
@@ -219,18 +220,18 @@ class HttpRoutingMethodList {
 		try {
 			type = Integer.parseInt(new String(typeBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
-			ServerLogger.getInstance().warn("questionPost error type no get error : " + new String(typeBytes, CharUtil.getAjaxCharset()));
+			QasiteLogger.warn("questionPost error type no get error : " + new String(typeBytes, CharUtil.getAjaxCharset()));
 			type = -1;
 		}
 		int userId = -1;
 		try {
 			userId = Integer.parseInt(new String(userIdBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
-			ServerLogger.getInstance().warn("questionPost error type no get error : " + new String(userIdBytes, CharUtil.getAjaxCharset()));
+			QasiteLogger.warn("questionPost error type no get error : " + new String(userIdBytes, CharUtil.getAjaxCharset()), e);
 			userId = -1;
 		}
 		if(type == -1 || userId == -1) {
-			ServerLogger.getInstance().warn("userId or type getting Error");
+			QasiteLogger.warn("userId or type getting Error");
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean result = QuestionDataLogic.insertQuestionTextData(title, question, type, userInfo, questionId);
@@ -254,7 +255,7 @@ class HttpRoutingMethodList {
 		} else {
 			String userName = SessionOperator.getUserDataFromSession(cookie);
 			if(userName == null) {
-				ServerLogger.getInstance().info("sessionid is " + cookie + ". this is not enable");
+				QasiteLogger.info("sessionid is " + cookie + ". this is not enable");
 				Map<String, String> postQuestionResult = new HashMap<>();
 				postQuestionResult.put(
 						JsonResponseCommonProtocol.KEY.commonProtocolName, JsonResponseCommonProtocol.VALUE_SESSION_EXPIRER.commonProtocolName);
@@ -272,11 +273,11 @@ class HttpRoutingMethodList {
 			try {
 				type = Integer.parseInt(new String(typeBytes, CharUtil.getAjaxCharset()));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn("questionPost error type no get error : " + new String(typeBytes, CharUtil.getAjaxCharset()));
+				QasiteLogger.warn("questionPost error type no get error : " + new String(typeBytes, CharUtil.getAjaxCharset()), e);
 				type = -1;
 			}
 			if(type == -1) {
-				ServerLogger.getInstance().warn("questionPost error type no get error");
+				QasiteLogger.warn("questionPost error type no get error");
 			}
 			int result = QuestionDataLogic.insertQuestionTable(titleBytes, questionBytes, userName, type);
 			Map<String, String> postQuestionResult = new HashMap<>();
@@ -392,7 +393,7 @@ class HttpRoutingMethodList {
 			try {
 				questionId = Integer.parseInt(m.group(1));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn(e, "get questionId error from request Param");
+				QasiteLogger.warn("get question detail foramt", e);
 				questionId = -1;
 			}
 		}
@@ -429,7 +430,7 @@ class HttpRoutingMethodList {
 			try {
 				questionId = Integer.parseInt(m.group(1));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn(e, "get questionId error from request Param");
+				QasiteLogger.warn("get questionId error from request Param", e);
 				questionId = -1;
 			}
 		}
@@ -488,18 +489,18 @@ class HttpRoutingMethodList {
 		try {
 			userId = Integer.parseInt(new String(userIdBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
-			ServerLogger.getInstance().warn("answer post error type no get error : " + new String(userIdBytes, CharUtil.getAjaxCharset()));
+			QasiteLogger.warn("answer post error type no get error : " + new String(userIdBytes, CharUtil.getAjaxCharset()));
 			userId = -1;
 		}
 		int questionId = -1;
 		try {
 			questionId = Integer.parseInt(new String(questionIdBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
-			ServerLogger.getInstance().warn("answer post error type no get error : " + new String(questionIdBytes, CharUtil.getAjaxCharset()));
+			QasiteLogger.warn("answer post error type no get error : " + new String(questionIdBytes, CharUtil.getAjaxCharset()), e);
 			questionId = -1;
 		}
 		if(userId == -1 || questionId == -1) {
-			ServerLogger.getInstance().warn("userId or type getting Error");
+			QasiteLogger.warn("userId or type getting Error");
 			return new ResponseMessageTypeNoBodyData(requestMess.getHttpProtocol(), ResonseStatusLine.Conflict);
 		}
 		boolean result = AnswerDataLogic.insertAnswerTextData(answerId, answer, questionId, userId);
@@ -645,7 +646,7 @@ class HttpRoutingMethodList {
 			try {
 				questionId = Integer.parseInt(m.group(1));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn(e, "get questionId error from request Param");
+				QasiteLogger.warn("get questionId error from request Param", e);
 				questionId = -1;
 			}
 		}
@@ -731,7 +732,7 @@ class HttpRoutingMethodList {
 		try {
 			actionResult = Integer.parseInt(new String(actionBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
-			ServerLogger.getInstance().warn(e, "get action result error from request Param");
+			QasiteLogger.warn("get action result error from request Param", e);
 			answerId = 0;
 		}
 
@@ -773,7 +774,7 @@ class HttpRoutingMethodList {
 			try {
 				answerId = Integer.parseInt(m.group(1));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn(e, "get answer id error from request Param");
+				QasiteLogger.warn("get answer id error from request Param", e);
 				answerId = -1;
 			}
 		}
@@ -787,7 +788,7 @@ class HttpRoutingMethodList {
 		try {
 			actionResult = Integer.parseInt(new String(actionBytes, CharUtil.getAjaxCharset()));
 		} catch(NumberFormatException e) {
-			ServerLogger.getInstance().warn(e, "get action result error from request Param");
+			QasiteLogger.warn("get action result error from request Param", e);
 			answerId = 0;
 		}
 
@@ -813,6 +814,25 @@ class HttpRoutingMethodList {
 
 	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/userRegister")
 	static ResponseMessage userRegister(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		return CreateResponseFacade.response("/userRegister", requestMess);
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/userRegisterFromMail-*")
+	static ResponseMessage userRegisterFromDirectPage(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/userRegisterFromDirect.html");
+		if(fileByteData == null) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
+		}
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/userRegisterFromMail")
+	static ResponseMessage userRegisterFromTmpUrl(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		return CreateResponseFacade.response("/userRegisterFromMail", requestMess);
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/userRegister_old")
+	static ResponseMessage userRegister_old(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
 		byte[] nameBytes = requestMess.getRequestBodyDataByKey("userName");
 		byte[] passwordBytes = requestMess.getRequestBodyDataByKey("digest");
 		byte[] emailTextBytes = requestMess.getRequestBodyDataByKey("mailText");
@@ -826,7 +846,7 @@ class HttpRoutingMethodList {
 		try {
 			isExistEmailAddress = UserDataLogic.existEmailAddress(emailText);
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e ,"user table accsess error to get email address");
+			QasiteLogger.warn("user table accsess error to get email address", e);
 			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Internal_Server_Error, null, "check exist address", nowActiveMethod());
 		}
 		if(isExistEmailAddress) {
@@ -904,7 +924,7 @@ class HttpRoutingMethodList {
 			try {
 				userId = Integer.parseInt(m.group(1));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn(e, "get questionId error from request Param");
+				QasiteLogger.warn("get questionId error from request Param", e);
 				userId = -1;
 			}
 		}
@@ -929,7 +949,7 @@ class HttpRoutingMethodList {
 			try {
 				userId = Integer.parseInt(m.group(1));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn(e, "get user id error from request Param");
+				QasiteLogger.warn("get user id error from request Param", e);
 				userId = -1;
 			}
 		}
@@ -956,7 +976,8 @@ class HttpRoutingMethodList {
 		innerMap.put("username", userInfo.getUserName());
 		innerMap.put("userId", userInfo.getUserId());
 		innerMap.put("userPicture", userInfo.getUserPicture());
-		innerMap.put("userLevel", userInfo.getUserLevelValue());
+		//innerMap.put("userLevel", userInfo.getUserLevelValue());
+		innerMap.put("userPoint", userInfo.getUserPoint());
 		innerMap.put("myInfoPage", myInfoPage);
 		retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, innerMap);
 		byte[] bytes = createJsonData(retMap);
@@ -983,6 +1004,15 @@ class HttpRoutingMethodList {
 		retMap.put(JsonResponseCommonProtocol.KEY.commonProtocolName, innerMap);
 		byte[] bytes = createJsonData(retMap);
 		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/getUserPictureData/*")
+	static ResponseMessage getUserPictureData(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		String requestPath = requestMess.getRequestPath();
+		int userId = getIdFromRequestPath(requestPath, "/getUserPictureData/([0-9]+)");
+		Map<String, Object> addtionalMap = new HashMap<>();
+		addtionalMap.put("userid", userId);
+		return CreateResponseFacade.response("/getUserPictureData", requestMess, addtionalMap);
 	}
 
 	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/userInfoRepairPage")
@@ -1014,6 +1044,10 @@ class HttpRoutingMethodList {
 		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
 
+	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/updateUserInfo")
+	static ResponseMessage updateUserInfo(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		return CreateResponseFacade.response("/updateUserInfo", requestMess);
+	}
 //	@HttpRoutingMarker(method=RequestHttpMethod.POST, uri="/updateUserInfo")
 //	static ResponseMessage updateUserInfo(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
 //		byte[] userIdByte = requestMess.getRequestBodyDataByKey("userId", false);
@@ -1327,7 +1361,6 @@ class HttpRoutingMethodList {
 		String filename = new String(filenameBytes, CharUtil.getAjaxCharset());
 		byte[] imgBytes = requestMess.getRequestBodyDataByKey("url");
 		String imgRawStr = new String(imgBytes, CharUtil.getAjaxCharset());
-		System.out.println(filename);
 		String[] imgRawStrLine = imgRawStr.split(",");
 		String tmpHead = imgRawStrLine[0];
 		String tmpBase64ImgData = imgRawStrLine[1];
@@ -1338,7 +1371,7 @@ class HttpRoutingMethodList {
 			String retBase64 = Base64.getEncoder().encodeToString(resizeData);
 			retData.put("resizeData", tmpHead + "," + retBase64);
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("imgpost error", e);
 			retData = new HashMap<>();
 		}
 		byte[] bytes = createJsonData(retData);
@@ -1362,12 +1395,21 @@ class HttpRoutingMethodList {
 			String retBase64 = Base64.getEncoder().encodeToString(resizeData);
 			retData.put("resizeData", tmpHead + "," + retBase64);
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("resizeData error.",e);
 			retData = new HashMap<>();
 		}
 		byte[] bytes = createJsonData(retData);
 		return new ResponseMessageTypeJson(ResponseContentType.JSON, bytes, requestMess.getHttpProtocol());
 		
+	}
+
+	@HttpRoutingMarker(method=RequestHttpMethod.GET, uri="/testAPI")
+	static ResponseMessage testAPIPage(RequestMessage requestMess) throws HttpRouterDelegateMethodCallError {
+		byte[] fileByteData = FileManager.getInstance().fileRead("html/testAPIPage.html");
+		if(fileByteData == null) {
+			throw new HttpRouterDelegateMethodCallError(ResonseStatusLine.Not_Found, null, "/ is not Found.", nowActiveMethod());
+		}
+		return new ResponseMessageTypeGetFile(ResponseContentType.HTML, fileByteData, requestMess.getHttpProtocol());
 	}
 
 	private static byte[] createJsonData(Object obj) {
@@ -1376,7 +1418,7 @@ class HttpRoutingMethodList {
 		try {
 			bytes = mapper.writeValueAsBytes(obj);
 		} catch (JsonProcessingException e) {
-			ServerLogger.getInstance().warn("cretate json error");
+			QasiteLogger.warn("cretate json error", e);
 			bytes = null;
 		}
 		return bytes;
@@ -1423,7 +1465,7 @@ class HttpRoutingMethodList {
 			try {
 				id = Integer.parseInt(m.group(1));
 			} catch(NumberFormatException e) {
-				ServerLogger.getInstance().warn(e, "get id error from request Param");
+				QasiteLogger.warn("get id error from request Param", e);
 				id = -1;
 			}
 		}

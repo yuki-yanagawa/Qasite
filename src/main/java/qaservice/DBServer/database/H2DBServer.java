@@ -1,11 +1,13 @@
 package qaservice.DBServer.database;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,6 +19,8 @@ import java.sql.Statement;
 
 import org.h2.tools.Server;
 
+import qaservice.Common.Logger.QasiteLogger;
+import qaservice.Common.debug.DebugChecker;
 import qaservice.DBServer.database.exception.DBSettingException;
 import qaservice.DBServer.main.DBServerMainGuiStart;
 import qaservice.DBServer.util.DBServerPropReader;
@@ -25,6 +29,7 @@ public class H2DBServer implements IDBServer {
 	private static final String DATABASE_PATH = "databases";
 	private static final String DATABASE_NAME = "datasheed.db";
 	private static final String CREATE_INIT_DBTABLE_SQL = "createtable/initcreatetable.sql";
+	private static final String CREATE_INIT_STOREDPROCEDURE_SQL = "createtable/initstoredProcedure.sql";
 	
 	private Server dbServer_;
 	private int port_ = -1;
@@ -41,8 +46,7 @@ public class H2DBServer implements IDBServer {
 				try { 
 					Files.delete(f.toPath());
 				} catch(IOException e) {
-					//e.printStackTrace();
-					DBServerMainGuiStart.guiConsoleOut(e.getMessage());
+					QasiteLogger.warn("start error", e);
 					throw new DBSettingException(e.getMessage());
 				}
 			}
@@ -61,22 +65,20 @@ public class H2DBServer implements IDBServer {
 			dbServer_.start();
 			Thread.sleep(2000);
 		} catch(ClassNotFoundException e) {
-			e.printStackTrace();
-			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
+			QasiteLogger.warn("h2 driver not found error", e);
 			throw new DBSettingException(e.getMessage());
 		} catch(SQLException se) {
-			se.printStackTrace();
-			DBServerMainGuiStart.guiConsoleOut(se.getMessage());
+			QasiteLogger.warn("db start error", se);
 			throw new DBSettingException(se.getMessage());
 		} catch(InterruptedException ie) {
-			ie.printStackTrace();
-			DBServerMainGuiStart.guiConsoleOut(ie.getMessage());
+			QasiteLogger.warn("db start interrupt", ie);
 		}
 		
 		port_ = port;
 		if(createDBTableFlg) {
 			createDBTable();
 		}
+		createStoredProcedure();
 	}
 	
 	private boolean existDBFile() {
@@ -88,8 +90,7 @@ public class H2DBServer implements IDBServer {
 			File file = Paths.get(DATABASE_PATH  + File.separator +  DATABASE_NAME).toFile();
 			file.createNewFile();
 		} catch(IOException e) {
-			e.printStackTrace();
-			DBServerMainGuiStart.guiConsoleOut(e.getMessage());
+			QasiteLogger.warn("createNewDB failed.", e);
 			throw new DBSettingException(e.getMessage());
 		}
 	}
@@ -106,20 +107,41 @@ public class H2DBServer implements IDBServer {
 			try(Connection conn = DriverManager.getConnection(isNessaryInitConnectPath(), "sa", "");
 				Statement st = conn.createStatement()) {
 				while(fileLine != null) {
-					System.out.println(fileLine);
+					if(DebugChecker.isDEBUGMode()) {
+						QasiteLogger.info(fileLine);
+					}
 					st.executeUpdate(fileLine);
 					fileLine = buf.readLine();
 				}
 			} catch(SQLException e) {
-				e.printStackTrace();
-				DBServerMainGuiStart.guiConsoleOut(e.getMessage());
+				QasiteLogger.warn("create table error.", e);
 			}
 		} catch(FileNotFoundException f) {
-			f.printStackTrace();
-			DBServerMainGuiStart.guiConsoleOut(f.getMessage());
+			QasiteLogger.warn("create table error. file", f);
 		} catch(IOException ie) {
-			ie.printStackTrace();
-			DBServerMainGuiStart.guiConsoleOut(ie.getMessage());
+			QasiteLogger.warn("create table error. io", ie);
+		}
+	}
+
+	private void createStoredProcedure() {
+		Path path = Paths.get(DATABASE_PATH + File.separator + CREATE_INIT_STOREDPROCEDURE_SQL);
+		try(FileInputStream fis = new FileInputStream(path.toFile());
+			InputStreamReader isr = new InputStreamReader(fis);
+			BufferedReader br = new BufferedReader(isr)){
+			try(Connection conn = DriverManager.getConnection(isNessaryInitConnectPath(), "sa", "");
+				Statement st = conn.createStatement()) {
+				String line;
+				while((line = br.readLine()) != null) {
+					if(DebugChecker.isDEBUGMode()) {
+						QasiteLogger.info(line);
+					}
+					st.executeUpdate(line);
+				}
+			} catch(SQLException e) {
+				QasiteLogger.warn("create stored procedure error.", e);
+			}
+		} catch(IOException e) {
+			QasiteLogger.warn("create stored procedure error.", e);
 		}
 	}
 
@@ -128,13 +150,14 @@ public class H2DBServer implements IDBServer {
 	}
 
 	@Override
-	public String getDBConnectPath() {
+	public DBConnectModel getDBConnectPath() {
 		if(port_ == -1) {
 			return null;
 		}
 		String host = DBServerPropReader.getProperties("serverHost").toString();
 		//System.out.println("Path : " + "jdbc:h2:tcp://" + host + ":" + String.valueOf(port_) + "/./" + DATABASE_PATH + "/" + DATABASE_NAME + ";MODE=MYSQL;");
-		return "jdbc:h2:tcp://" + host + ":" + String.valueOf(port_) + "/./" + DATABASE_PATH + "/" + DATABASE_NAME + ";MODE=MYSQL;";
+		return new DBConnectModel("jdbc:h2:tcp://" + host + ":" + String.valueOf(port_) + "/./" + DATABASE_PATH + "/" + DATABASE_NAME + ";MODE=MYSQL;", "sa", "");
+		
 	}
 
 //	private static void createMasterTable() {
@@ -149,7 +172,7 @@ public class H2DBServer implements IDBServer {
 //	                   " PRIMARY KEY ( tableName ))";
 //			stmt.execute(sql);
 //		} catch(SQLException e) {
-//			e.printStackTrace();
+//
 //		}
 //	}
 }

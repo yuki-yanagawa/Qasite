@@ -9,9 +9,13 @@ import java.net.Socket;
 import java.security.PublicKey;
 import java.util.Arrays;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
+import qaservice.DBServer.database.DBConnectModel;
 import qaservice.DBServer.database.H2DBServer;
 import qaservice.DBServer.database.IDBServer;
+import qaservice.DBServer.database.worker.backup.BackUpCollectThread;
+import qaservice.DBServer.database.worker.userupdate.UserPointUpdateWorker;
 import qaservice.DBServer.keys.KeysOperation;
 import qaservice.DBServer.keys.exception.KeySettingException;
 import qaservice.DBServer.util.DBServerPropReader;
@@ -19,36 +23,52 @@ import qaservice.DBServer.worker.rankcheck.RankCheckWorker;
 
 
 public class DBServerMain {
+	private static final String SERVICE_NAME = "QasiteDBServer";
 	public static void main(String[] args) throws Exception {
+		QasiteLogger.startLogger(SERVICE_NAME);
 		boolean guiStartFlg = args == null ? true : false;
 		if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut("DB Server Starting.....");
 		//DB Server Stop Key
 		try {
 			KeysOperation.initialize();
 		} catch(KeySettingException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("key operation error.", e);
 			return;
 		}
 		if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut("Key initialize end....");
 
 		//DB Server Start
-		boolean keyGen = Boolean.parseBoolean(DBServerPropReader.getProperties("everyKeyGenerate").toString());
+		boolean dbInitSetting = Boolean.parseBoolean(DBServerPropReader.getProperties("dbInitSetting").toString());
 		int port = Integer.parseInt(DBServerPropReader.getProperties("port").toString());
 		IDBServer dbServ = new H2DBServer();
+		DBConnectModel dbConnectModel = null;
 		try {
-			dbServ.start(port, keyGen);
+			dbServ.start(port, dbInitSetting);
+			dbConnectModel = dbServ.getDBConnectPath();
 		} catch(Throwable e) {
-			e.printStackTrace();
-			if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut(e.getMessage());
+			QasiteLogger.warn("DB start error.DB Server can not start.", e);
+			if(guiStartFlg) {
+				DBServerMainGuiStart.guiConsoleOut(e.getMessage());
+			} else {
+				System.exit(-1);
+			}
 			return;
 		}
 
 		//Rank Check Worker Start
-		new RankCheckWorker().start();
+		new RankCheckWorker(dbConnectModel).start();
 		if(guiStartFlg) DBServerMainGuiStart.guiConsoleOut("db server start!!!!");
 		//Server Strop Operator Reciver
-		new DBServerOperationReciver(dbServ).start();
+		boolean needServerOperationReciver = Boolean.parseBoolean(DBServerPropReader.getProperties("needStartServerOperationReciver").toString());
+		if(needServerOperationReciver) {
+			new DBServerOperationReciver(dbServ).start();
+		}
 
+		//DataBase Collect Thread For BackUp
+		new BackUpCollectThread(dbConnectModel).start();
+
+		//UserPoint Count Thread
+		new UserPointUpdateWorker(dbConnectModel).start();
 	}
 	
 	
@@ -82,7 +102,6 @@ public class DBServerMain {
 					os.close();
 				}
 			} catch(IOException e) {
-				//e.printStackTrace();
 				DBServerMainGuiStart.guiConsoleOut(e.getMessage());
 				stopServer();
 				isRunning_ = false;
@@ -91,6 +110,7 @@ public class DBServerMain {
 		
 		private void stopServer() {
 			dbServer_.dbServerShutdown();
+			QasiteLogger.endLogger();
 		}
 	}
 }

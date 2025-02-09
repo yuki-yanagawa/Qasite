@@ -1,7 +1,6 @@
 package qaservice.WebServer.main;
 
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
-import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.mainserver.ServerOperator;
 import qaservice.WebServer.mainserver.taskhandle.http.FileManager;
 import qaservice.WebServer.propreader.ServerPropKey;
@@ -10,11 +9,6 @@ import qaservice.WebServer.propreader.ServerPropReader;
 public class WebServerStartingOperation {
 	public static  void serverLoggerSettingOn() {
 		//Server logger create Instance
-		ServerLogger.getInstance().appLog("+++++++++ Web Server Start ++++++++++");
-		ServerLogger.getInstance().appLog("     *   *                 *    *          ");
-		ServerLogger.getInstance().appLog("     *****                 ******          ");
-		ServerLogger.getInstance().appLog("                                           ");
-		ServerLogger.getInstance().appLog("           ***************                 ");
 	}
 
 	static void autoStart() {
@@ -27,9 +21,11 @@ public class WebServerStartingOperation {
 			port = -1;
 		}
 		if(port == -1) port = 9090;
+
+		//afeter qasite logger can be used
 		boolean serverStartResult = ServerOperator.mainServerStart(port);
 		if(!serverStartResult) {
-			
+			System.exit(-1);
 		}
 		String dbPath = ServerPropReader.getProperties(ServerPropKey.DBServerConnetionPath.getKey()).toString();
 		DBConnectionOperation.getInstance().createConnectionPool(dbPath);

@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
+import qaservice.Common.Logger.QasiteLogger;
+
 public class DBServerPropReader {
 	private static final String DBSERVER_PROPERTIES_FILE = "conf/dbserver.properties";
 	
@@ -22,7 +24,7 @@ public class DBServerPropReader {
 			InputStreamReader isr = new InputStreamReader(fis)){
 			dbprops_.load(isr);
 		} catch(IOException e) {
-			e.printStackTrace();
+			QasiteLogger.warn("dbserver.properties read error.", e);
 		}
 	}
 	

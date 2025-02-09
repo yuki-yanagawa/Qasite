@@ -4,9 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.Common.charcterutil.CharUtil;
 import qaservice.Common.charcterutil.messageDigest.MessageDigestTypeSHA1;
-import qaservice.WebServer.logger.ServerLogger;
 import qaservice.WebServer.mainserver.taskhandle.http.request.exception.HttpRequestHandlingException;
 
 public class ResponseMessageTypeWebSocket extends ResponseMessage {
@@ -33,7 +33,7 @@ public class ResponseMessageTypeWebSocket extends ResponseMessage {
 				byteArrayOutputStream.write(sb.toString().getBytes());
 				//byteArrayOutputStream.write(ResponseMessageCreateHelper.END_CODE.getBytes());
 		} catch(IOException e) {
-			ServerLogger.getInstance().warn(e, "create response message error type file");
+			QasiteLogger.warn("create response message error type file", e);
 			throw new HttpRequestHandlingException("create response message error");
 		}
 		return byteArrayOutputStream.toByteArray();

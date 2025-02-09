@@ -5,8 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import qaservice.Common.Logger.QasiteLogger;
 import qaservice.WebServer.dbconnect.DBConnectionOperation;
-import qaservice.WebServer.logger.ServerLogger;
 
 public class NumberingTableAccessor {
 	/**
@@ -27,12 +27,12 @@ public class NumberingTableAccessor {
 				tableId = rs.getInt(2);
 			}
 		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "NumberingTable access getMyId Error");
+			QasiteLogger.warn("NumberingTable access getMyId Error", e);
 			return -1;
 		}
 		
 		if(retId == -1 || tableId == -1) {
-			ServerLogger.getInstance().warn("NumberingTable access getMyId Error");
+			QasiteLogger.warn("NumberingTable access getMyId Error");
 			return retId;
 		}
 		
@@ -42,11 +42,11 @@ public class NumberingTableAccessor {
 			ps.setInt(2, tableId);
 			int result = ps.executeUpdate();
 			if(result != 1) {
-				ServerLogger.getInstance().warn("NumberingTable update Error");
+				QasiteLogger.warn("NumberingTable update Error");
 				return -1;
 			}
  		} catch(SQLException e) {
-			ServerLogger.getInstance().warn(e, "NumberingTable update Error");
+			QasiteLogger.warn("NumberingTable update Error", e);
 			return -1;
 		}
 		return retId;

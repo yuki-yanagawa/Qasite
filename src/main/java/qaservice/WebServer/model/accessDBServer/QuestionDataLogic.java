@@ -1,4 +1,4 @@
-package qaservice.WebServer.accessDBServer;
+package qaservice.WebServer.model.accessDBServer;
 
 import java.sql.Connection;
 import java.util.List;
